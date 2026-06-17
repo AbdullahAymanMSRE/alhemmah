@@ -1,0 +1,113 @@
+{
+  "app": {
+    "name": "Tasker"
+  },
+  "nav": {
+    "day": "Day",
+    "schedule": "Schedule",
+    "taskTypes": "Tasks",
+    "settings": "Settings",
+    "signOut": "Sign out"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "signInTitle": "Welcome back",
+    "signUpTitle": "Create your account",
+    "name": "Name",
+    "email": "Email",
+    "password": "Password",
+    "continueWithGoogle": "Continue with Google",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "Already have an account?",
+    "or": "or",
+    "signingIn": "Signing in…",
+    "signingUp": "Creating account…",
+    "errorGeneric": "Something went wrong. Please try again.",
+    "invalidCredentials": "Invalid email or password."
+  },
+  "day": {
+    "today": "Today",
+    "goToToday": "Today",
+    "previousDay": "Previous day",
+    "nextDay": "Next day",
+    "pickDate": "Pick a date",
+    "empty": "No blocks for this day yet.",
+    "emptyHint": "Set up your schedule to see your day here.",
+    "setUpSchedule": "Set up schedule",
+    "addTask": "Add task",
+    "break": "Break",
+    "doneOfTotal": "{done} of {total} h done",
+    "summary": "Summary",
+    "reorderHint": "Drag to reorder (this day only)"
+  },
+  "addTask": {
+    "title": "Add a task to this day",
+    "label": "Task name",
+    "labelPlaceholder": "e.g. Review notes",
+    "duration": "Duration (hours)",
+    "withBreak": "Add a break after it",
+    "breakDuration": "Break (hours)",
+    "promote": "Add to my standard day",
+    "promoteHint": "Also adds it to every future day as a new task type.",
+    "cancel": "Cancel",
+    "add": "Add"
+  },
+  "schedule": {
+    "title": "Schedule",
+    "subtitle": "Your fixed daily routine. Edits apply to future days; past days keep what they were.",
+    "addWork": "Add work block",
+    "addBreak": "Add break",
+    "empty": "Your schedule is empty.",
+    "emptyHint": "Add work blocks and breaks to build your day.",
+    "selectTaskType": "Task",
+    "duration": "Hours",
+    "noTaskTypes": "Create a task first.",
+    "createTaskType": "Create a task",
+    "totalPlanned": "Total planned: {hours} h",
+    "save": "Save",
+    "delete": "Delete",
+    "reorderHint": "Drag to reorder"
+  },
+  "taskTypes": {
+    "title": "Tasks",
+    "subtitle": "Your task types and how long each takes. This is the source list.",
+    "add": "Add task",
+    "label": "Name",
+    "labelPlaceholder": "e.g. Work",
+    "targetHours": "Target hours",
+    "excludedDays": "Skip on",
+    "empty": "No tasks yet.",
+    "emptyHint": "Add the kinds of work you do and their total time.",
+    "plannedVsTarget": "{planned} h scheduled / {target} h target",
+    "mismatch": "Scheduled hours don't match the target.",
+    "save": "Save",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this task and its schedule blocks?"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "english": "English",
+    "arabic": "العربية",
+    "dayStart": "Day starts at",
+    "dayStartHint": "Work past this hour still counts as the previous day.",
+    "account": "Account",
+    "save": "Save",
+    "saved": "Saved"
+  },
+  "weekdays": {
+    "0": "Sun",
+    "1": "Mon",
+    "2": "Tue",
+    "3": "Wed",
+    "4": "Thu",
+    "5": "Fri",
+    "6": "Sat"
+  },
+  "common": {
+    "loading": "Loading…",
+    "saving": "Saving…",
+    "hours": "h"
+  }
+}

@@ -1,0 +1,1 @@
+ALTER TABLE "day_records" ADD COLUMN "populated" boolean DEFAULT false NOT NULL;
