@@ -95,30 +95,10 @@ export const verification = pgTable(
 /* ------------------------------------------------------------------ */
 
 /**
- * Task Type — the source list (right-hand table). User authors these first:
- * a label + a target total in hours + which weekdays it is excluded from.
- */
-export const taskTypes = pgTable(
-  "task_types",
-  {
-    id: text("id").primaryKey(),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    label: text("label").notNull(),
-    targetHours: doublePrecision("target_hours").notNull().default(0),
-    // JS getDay() weekday numbers excluded for this type (0 = Sunday .. 6 = Saturday).
-    excludedWeekdays: integer("excluded_weekdays").array().notNull().default([]),
-    position: integer("position").notNull().default(0),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-  },
-  (table) => [index("task_types_user_id_idx").on(table.userId)],
-);
-
-/**
- * Template Block — one entry in the fixed daily timeline (left-hand table).
- * kind = 'work' references a Task Type and carries a slice of its hours;
- * kind = 'break' has only a duration.
+ * Template Block — one entry in the fixed daily timeline. Self-describing:
+ * kind = 'work' carries its own free-text label and a duration; kind = 'break'
+ * carries a duration and an optional label. A Block may be excluded from
+ * specific weekdays (ADR 0003).
  */
 export const templateBlocks = pgTable(
   "template_blocks",
@@ -128,13 +108,11 @@ export const templateBlocks = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     kind: text("kind", { enum: ["work", "break"] }).notNull(),
-    // Null for breaks; references the originating Task Type for work blocks.
-    taskTypeId: text("task_type_id").references(() => taskTypes.id, {
-      onDelete: "cascade",
-    }),
-    // Optional override label (mainly for breaks). Work blocks display their Task Type label.
+    // The Block's label. Required in practice for work blocks; optional for breaks.
     label: text("label"),
     durationHours: doublePrecision("duration_hours").notNull().default(0),
+    // JS getDay() weekday numbers this Block is skipped on (0 = Sunday .. 6 = Saturday).
+    excludedWeekdays: integer("excluded_weekdays").array().notNull().default([]),
     position: integer("position").notNull().default(0),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
@@ -180,8 +158,6 @@ export const dayBlocks = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     kind: text("kind", { enum: ["work", "break"] }).notNull(),
-    // Snapshot of the Task Type id (for summary rollups). Null for breaks / ad-hoc.
-    taskTypeId: text("task_type_id"),
     label: text("label").notNull(),
     durationHours: doublePrecision("duration_hours").notNull().default(0),
     done: boolean("done").notNull().default(false),
@@ -209,7 +185,6 @@ export const userSettings = pgTable("user_settings", {
     .notNull(),
 });
 
-export type TaskType = typeof taskTypes.$inferSelect;
 export type TemplateBlock = typeof templateBlocks.$inferSelect;
 export type DayRecord = typeof dayRecords.$inferSelect;
 export type DayBlock = typeof dayBlocks.$inferSelect;

@@ -1,13 +1,15 @@
 {
   "app": {
-    "name": "Tasker"
+    "name": "Tasker",
+    "description": "Your daily schedule, checked off and remembered. A bilingual personal routine tracker with a per-day history.",
+    "tagline": "Your daily schedule, checked off and remembered."
   },
   "nav": {
     "day": "Day",
     "schedule": "Schedule",
-    "taskTypes": "Tasks",
     "settings": "Settings",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "plan": "Plan"
   },
   "auth": {
     "signIn": "Sign in",
@@ -49,41 +51,27 @@
     "withBreak": "Add a break after it",
     "breakDuration": "Break (hours)",
     "promote": "Add to my standard day",
-    "promoteHint": "Also adds it to every future day as a new task type.",
+    "promoteHint": "Also adds it to every future day.",
     "cancel": "Cancel",
     "add": "Add"
   },
   "schedule": {
     "title": "Schedule",
     "subtitle": "Your fixed daily routine. Edits apply to future days; past days keep what they were.",
-    "addWork": "Add work block",
+    "addWork": "Add task",
     "addBreak": "Add break",
     "empty": "Your schedule is empty.",
-    "emptyHint": "Add work blocks and breaks to build your day.",
-    "selectTaskType": "Task",
+    "emptyHint": "Add tasks and breaks to build your day.",
+    "workLabel": "Task",
+    "labelPlaceholder": "e.g. Work",
     "duration": "Hours",
-    "noTaskTypes": "Create a task first.",
-    "createTaskType": "Create a task",
     "totalPlanned": "Total planned: {hours} h",
-    "save": "Save",
+    "totalsTitle": "Totals",
+    "hoursShort": "{hours} h",
+    "skipOn": "Skip on",
+    "applyToAll": "Apply to all “{label}”",
     "delete": "Delete",
     "reorderHint": "Drag to reorder"
-  },
-  "taskTypes": {
-    "title": "Tasks",
-    "subtitle": "Your task types and how long each takes. This is the source list.",
-    "add": "Add task",
-    "label": "Name",
-    "labelPlaceholder": "e.g. Work",
-    "targetHours": "Target hours",
-    "excludedDays": "Skip on",
-    "empty": "No tasks yet.",
-    "emptyHint": "Add the kinds of work you do and their total time.",
-    "plannedVsTarget": "{planned} h scheduled / {target} h target",
-    "mismatch": "Scheduled hours don't match the target.",
-    "save": "Save",
-    "delete": "Delete",
-    "deleteConfirm": "Delete this task and its schedule blocks?"
   },
   "settings": {
     "title": "Settings",

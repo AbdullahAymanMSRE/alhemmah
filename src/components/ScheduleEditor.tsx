@@ -4,10 +4,12 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { SortableList } from "@/components/SortableList";
-import { GripIcon, TrashIcon } from "@/components/icons";
+import { CalendarIcon, GripIcon, TrashIcon } from "@/components/icons";
+import { cn } from "@/lib/cn";
 import {
   addTemplateBreak,
   addTemplateWorkBlock,
+  applyWeekdaysToLabel,
   deleteTemplateBlock,
   reorderTemplateBlocks,
   updateTemplateBlock,
@@ -16,41 +18,62 @@ import {
 type Block = {
   id: string;
   kind: "work" | "break";
-  taskTypeId: string | null;
   label: string | null;
-  taskTypeLabel: string | null;
   durationHours: number;
+  excludedWeekdays: number[];
 };
-type TaskTypeOption = { id: string; label: string };
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+const SUGGESTIONS_ID = "label-suggestions";
 
 export function ScheduleEditor({
   blocks,
-  taskTypes,
+  suggestions,
 }: {
   blocks: Block[];
-  taskTypes: TaskTypeOption[];
+  suggestions: string[];
 }) {
   const t = useTranslations("schedule");
   const td = useTranslations("day");
   const router = useRouter();
   const [, start] = useTransition();
   const [items, setItems] = useState(blocks);
+  const [durationDrafts, setDurationDrafts] = useState<Record<string, string>>({});
+  const [labelDrafts, setLabelDrafts] = useState<Record<string, string>>({});
 
   // Resync local order/values whenever the server data changes (after refresh).
   const sig = useMemo(
     () =>
       JSON.stringify(
-        blocks.map((b) => [b.id, b.durationHours, b.taskTypeId, b.label])
+        blocks.map((b) => [b.id, b.durationHours, b.label, b.excludedWeekdays]),
       ),
-    [blocks]
+    [blocks],
   );
   useEffect(() => {
     setItems(blocks);
+    setDurationDrafts({});
+    setLabelDrafts({});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sig]);
 
-  const total =
-    Math.round(items.reduce((s, b) => s + b.durationHours, 0) * 100) / 100;
+  const total = round2(items.reduce((s, b) => s + b.durationHours, 0));
+
+  // Group work blocks by normalized label; sum hours. First-seen casing is canonical.
+  const totals = useMemo(() => {
+    const map = new Map<string, { label: string; hours: number }>();
+    for (const b of items) {
+      if (b.kind !== "work") continue;
+      const raw = (b.label ?? "").trim();
+      if (!raw) continue;
+      const key = raw.toLowerCase();
+      const cur = map.get(key);
+      if (cur) cur.hours += b.durationHours;
+      else map.set(key, { label: raw, hours: b.durationHours });
+    }
+    return [...map.values()]
+      .map((v) => ({ ...v, hours: round2(v.hours) }))
+      .sort((a, b) => b.hours - a.hours);
+  }, [items]);
 
   function reorder(ids: string[]) {
     setItems((prev) => ids.map((id) => prev.find((b) => b.id === id)!));
@@ -60,9 +83,18 @@ export function ScheduleEditor({
     });
   }
 
-  function setDuration(id: string, value: number) {
+  function commitDuration(id: string, raw: string) {
+    const b = items.find((x) => x.id === id);
+    if (!b) return;
+    const value = Math.max(0, round2(Number(raw) || 0));
+    setDurationDrafts((d) => {
+      const n = { ...d };
+      delete n[id];
+      return n;
+    });
+    if (value === b.durationHours) return;
     setItems((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, durationHours: value } : b))
+      prev.map((x) => (x.id === id ? { ...x, durationHours: value } : x)),
     );
     start(async () => {
       await updateTemplateBlock(id, { durationHours: value });
@@ -70,9 +102,46 @@ export function ScheduleEditor({
     });
   }
 
-  function setType(id: string, taskTypeId: string) {
+  function commitLabel(id: string, raw: string) {
+    const b = items.find((x) => x.id === id);
+    if (!b) return;
+    const value = raw.trim();
+    setLabelDrafts((d) => {
+      const n = { ...d };
+      delete n[id];
+      return n;
+    });
+    if (value === (b.label ?? "")) return;
+    if (b.kind === "work" && !value) return; // don't blank a work label
+    setItems((prev) => prev.map((x) => (x.id === id ? { ...x, label: value } : x)));
     start(async () => {
-      await updateTemplateBlock(id, { taskTypeId });
+      await updateTemplateBlock(id, { label: value });
+      router.refresh();
+    });
+  }
+
+  function setWeekdays(id: string, excludedWeekdays: number[]) {
+    setItems((prev) =>
+      prev.map((x) => (x.id === id ? { ...x, excludedWeekdays } : x)),
+    );
+    start(async () => {
+      await updateTemplateBlock(id, { excludedWeekdays });
+      router.refresh();
+    });
+  }
+
+  function applyWeekdaysEverywhere(id: string, excludedWeekdays: number[]) {
+    const src = items.find((x) => x.id === id);
+    const label = (src?.label ?? "").trim().toLowerCase();
+    setItems((prev) =>
+      prev.map((x) =>
+        x.kind === "work" && (x.label ?? "").trim().toLowerCase() === label
+          ? { ...x, excludedWeekdays }
+          : x,
+      ),
+    );
+    start(async () => {
+      await applyWeekdaysToLabel(id, excludedWeekdays);
       router.refresh();
     });
   }
@@ -99,7 +168,31 @@ export function ScheduleEditor({
         )}
       </header>
 
-      <AddBlocks taskTypes={taskTypes} />
+      {totals.length > 0 && (
+        <div className="rounded-lg border border-border bg-surface p-4">
+          <span className="text-xs font-medium uppercase tracking-wide text-faint">
+            {t("totalsTitle")}
+          </span>
+          <ul className="mt-2 flex flex-col gap-1">
+            {totals.map((row) => (
+              <li key={row.label} className="flex justify-between text-xs">
+                <span className="auto-dir text-muted">{row.label}</span>
+                <span className="tabular-nums text-faint">
+                  {t("hoursShort", { hours: row.hours })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <datalist id={SUGGESTIONS_ID}>
+        {suggestions.map((s) => (
+          <option key={s} value={s} />
+        ))}
+      </datalist>
+
+      <AddBlocks />
 
       {items.length === 0 ? (
         <div className="rounded-lg border border-border bg-surface p-6 text-center">
@@ -111,53 +204,61 @@ export function ScheduleEditor({
           items={items}
           onReorder={reorder}
           renderItem={(b, handle) => (
-            <div className="flex items-center gap-2 rounded-lg border border-border bg-surface p-2.5">
-              <button
-                {...handle}
-                className="cursor-grab touch-none rounded p-1 text-faint hover:text-muted active:cursor-grabbing"
-                aria-label={t("reorderHint")}
-              >
-                <GripIcon />
-              </button>
-
-              {b.kind === "work" ? (
-                <select
-                  value={b.taskTypeId ?? ""}
-                  onChange={(e) => setType(b.id, e.target.value)}
-                  className="auto-dir h-9 flex-1 rounded-md border border-border bg-surface-2 px-2 text-sm outline-none focus:border-border-strong"
+            <div className="rounded-lg border border-border bg-surface p-2.5">
+              <div className="flex items-center gap-2">
+                <button
+                  {...handle}
+                  className="cursor-grab touch-none rounded p-1 text-faint hover:text-muted active:cursor-grabbing"
+                  aria-label={t("reorderHint")}
                 >
-                  {taskTypes.map((tt) => (
-                    <option key={tt.id} value={tt.id}>
-                      {tt.label}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span className="flex-1 text-sm text-muted">
-                  {b.label || td("break")}
-                </span>
-              )}
+                  <GripIcon />
+                </button>
 
-              <input
-                type="number"
-                min={0}
-                step={0.25}
-                defaultValue={b.durationHours}
-                onBlur={(e) => {
-                  const v = Number(e.target.value) || 0;
-                  if (v !== b.durationHours) setDuration(b.id, v);
-                }}
-                className="h-9 w-16 rounded-md border border-border bg-surface-2 px-2 text-sm tabular-nums outline-none focus:border-border-strong"
-                aria-label={t("duration")}
-              />
+                {b.kind === "work" ? (
+                  <input
+                    value={labelDrafts[b.id] ?? b.label ?? ""}
+                    list={SUGGESTIONS_ID}
+                    placeholder={t("labelPlaceholder")}
+                    onChange={(e) =>
+                      setLabelDrafts((d) => ({ ...d, [b.id]: e.target.value }))
+                    }
+                    onBlur={(e) => commitLabel(b.id, e.target.value)}
+                    className="auto-dir h-9 flex-1 rounded-md border border-border bg-surface-2 px-2 text-sm outline-none focus:border-border-strong"
+                    aria-label={t("workLabel")}
+                  />
+                ) : (
+                  <span className="flex-1 text-sm text-muted">
+                    {b.label || td("break")}
+                  </span>
+                )}
 
-              <button
-                onClick={() => remove(b.id)}
-                className="rounded p-1.5 text-faint transition-colors hover:text-danger"
-                aria-label={t("delete")}
-              >
-                <TrashIcon />
-              </button>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.25}
+                  value={durationDrafts[b.id] ?? String(b.durationHours)}
+                  onChange={(e) =>
+                    setDurationDrafts((d) => ({ ...d, [b.id]: e.target.value }))
+                  }
+                  onBlur={(e) => commitDuration(b.id, e.target.value)}
+                  className="h-9 w-16 rounded-md border border-border bg-surface-2 px-2 text-sm tabular-nums outline-none focus:border-border-strong"
+                  aria-label={t("duration")}
+                />
+
+                <WeekdayDisclosure
+                  block={b}
+                  onChange={(days) => setWeekdays(b.id, days)}
+                  onApplyAll={(days) => applyWeekdaysEverywhere(b.id, days)}
+                />
+
+                <button
+                  onClick={() => remove(b.id)}
+                  className="rounded p-1.5 text-faint transition-colors hover:text-danger"
+                  aria-label={t("delete")}
+                >
+                  <TrashIcon />
+                </button>
+              </div>
             </div>
           )}
         />
@@ -166,18 +267,97 @@ export function ScheduleEditor({
   );
 }
 
-function AddBlocks({ taskTypes }: { taskTypes: TaskTypeOption[] }) {
+/** A small calendar button that expands the 7 weekday toggles + apply-to-all. */
+function WeekdayDisclosure({
+  block,
+  onChange,
+  onApplyAll,
+}: {
+  block: Block;
+  onChange: (days: number[]) => void;
+  onApplyAll: (days: number[]) => void;
+}) {
+  const t = useTranslations("schedule");
+  const tw = useTranslations("weekdays");
+  const [open, setOpen] = useState(false);
+  const excluded = block.excludedWeekdays;
+  const active = excluded.length > 0;
+
+  function toggleDay(d: number) {
+    onChange(
+      excluded.includes(d)
+        ? excluded.filter((x) => x !== d)
+        : [...excluded, d].sort((a, b) => a - b),
+    );
+  }
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          "relative rounded p-1.5 transition-colors",
+          active ? "text-accent" : "text-faint hover:text-muted",
+        )}
+        aria-label={t("skipOn")}
+        aria-expanded={open}
+      >
+        <CalendarIcon />
+        {active && (
+          <span className="absolute end-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-accent" />
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute end-0 z-10 mt-1 w-48 rounded-lg border border-border-strong bg-surface p-3 shadow-lg">
+          <span className="text-xs font-medium text-muted">{t("skipOn")}</span>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {[0, 1, 2, 3, 4, 5, 6].map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => toggleDay(d)}
+                className={cn(
+                  "rounded-md border px-2 py-1 text-xs transition-colors",
+                  excluded.includes(d)
+                    ? "border-border-strong bg-surface-2 text-faint line-through"
+                    : "border-border text-muted hover:text-foreground",
+                )}
+              >
+                {tw(String(d))}
+              </button>
+            ))}
+          </div>
+          {block.kind === "work" && (block.label ?? "").trim() && (
+            <button
+              onClick={() => onApplyAll(excluded)}
+              className="mt-2.5 w-full rounded-md border border-border px-2 py-1.5 text-xs text-muted transition-colors hover:text-foreground"
+            >
+              {t("applyToAll", { label: (block.label ?? "").trim() })}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AddBlocks() {
   const t = useTranslations("schedule");
   const router = useRouter();
   const [, start] = useTransition();
-  const [typeId, setTypeId] = useState(taskTypes[0]?.id ?? "");
+  const [label, setLabel] = useState("");
   const [workDur, setWorkDur] = useState("1");
   const [breakDur, setBreakDur] = useState("0.25");
 
   function addWork() {
-    if (!typeId) return;
+    const clean = label.trim();
+    if (!clean) return;
+    const value = Math.max(0, round2(Number(workDur) || 0));
     start(async () => {
-      await addTemplateWorkBlock(typeId, Number(workDur) || 0);
+      await addTemplateWorkBlock(clean, value);
+      setLabel("");
+      setWorkDur("1");
       router.refresh();
     });
   }
@@ -190,58 +370,41 @@ function AddBlocks({ taskTypes }: { taskTypes: TaskTypeOption[] }) {
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border-strong bg-surface/50 p-4">
-      {taskTypes.length === 0 ? (
-        <div className="flex items-center justify-between gap-3 text-sm">
-          <span className="text-muted">{t("noTaskTypes")}</span>
-          <a href="/tasks" className="text-accent hover:underline">
-            {t("createTaskType")}
-          </a>
-        </div>
-      ) : (
-        <div className="flex flex-wrap items-end gap-2">
-          <label className="flex flex-1 flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted">
-              {t("selectTaskType")}
-            </span>
-            <select
-              value={typeId}
-              onChange={(e) => setTypeId(e.target.value)}
-              className="auto-dir h-9 rounded-md border border-border bg-surface-2 px-2 text-sm outline-none focus:border-border-strong"
-            >
-              {taskTypes.map((tt) => (
-                <option key={tt.id} value={tt.id}>
-                  {tt.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex w-16 flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted">
-              {t("duration")}
-            </span>
-            <input
-              type="number"
-              min={0}
-              step={0.25}
-              value={workDur}
-              onChange={(e) => setWorkDur(e.target.value)}
-              className="h-9 rounded-md border border-border bg-surface-2 px-2 text-sm tabular-nums outline-none focus:border-border-strong"
-            />
-          </label>
-          <button
-            onClick={addWork}
-            className="h-9 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-opacity hover:opacity-90"
-          >
-            {t("addWork")}
-          </button>
-        </div>
-      )}
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="flex flex-1 flex-col gap-1.5">
+          <span className="text-xs font-medium text-muted">{t("workLabel")}</span>
+          <input
+            value={label}
+            list={SUGGESTIONS_ID}
+            placeholder={t("labelPlaceholder")}
+            onChange={(e) => setLabel(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addWork()}
+            className="auto-dir h-9 rounded-md border border-border bg-surface-2 px-2 text-sm outline-none focus:border-border-strong"
+          />
+        </label>
+        <label className="flex w-16 flex-col gap-1.5">
+          <span className="text-xs font-medium text-muted">{t("duration")}</span>
+          <input
+            type="number"
+            min={0}
+            step={0.25}
+            value={workDur}
+            onChange={(e) => setWorkDur(e.target.value)}
+            className="h-9 rounded-md border border-border bg-surface-2 px-2 text-sm tabular-nums outline-none focus:border-border-strong"
+          />
+        </label>
+        <button
+          onClick={addWork}
+          disabled={!label.trim()}
+          className="h-9 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+        >
+          {t("addWork")}
+        </button>
+      </div>
 
       <div className="flex items-end gap-2 border-t border-border pt-3">
         <label className="flex w-16 flex-col gap-1.5">
-          <span className="text-xs font-medium text-muted">
-            {t("duration")}
-          </span>
+          <span className="text-xs font-medium text-muted">{t("duration")}</span>
           <input
             type="number"
             min={0}

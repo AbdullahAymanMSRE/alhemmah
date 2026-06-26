@@ -4,7 +4,6 @@ import { db } from "@/db";
 import {
   dayBlocks,
   dayRecords,
-  taskTypes,
   templateBlocks,
   userSettings,
   type DayBlock,
@@ -34,21 +33,12 @@ export async function getSettings(userId: string) {
   return created[0];
 }
 
-export async function getTaskTypes(userId: string) {
-  return db
-    .select()
-    .from(taskTypes)
-    .where(eq(taskTypes.userId, userId))
-    .orderBy(asc(taskTypes.position), asc(taskTypes.createdAt));
-}
-
 export type TemplateBlockView = {
   id: string;
   kind: "work" | "break";
-  taskTypeId: string | null;
   label: string | null;
-  taskTypeLabel: string | null;
   durationHours: number;
+  excludedWeekdays: number[];
   position: number;
 };
 
@@ -59,17 +49,48 @@ export async function getTemplateBlocks(
     .select({
       id: templateBlocks.id,
       kind: templateBlocks.kind,
-      taskTypeId: templateBlocks.taskTypeId,
       label: templateBlocks.label,
-      taskTypeLabel: taskTypes.label,
       durationHours: templateBlocks.durationHours,
+      excludedWeekdays: templateBlocks.excludedWeekdays,
       position: templateBlocks.position,
     })
     .from(templateBlocks)
-    .leftJoin(taskTypes, eq(templateBlocks.taskTypeId, taskTypes.id))
     .where(eq(templateBlocks.userId, userId))
     .orderBy(asc(templateBlocks.position), asc(templateBlocks.createdAt));
-  return rows;
+  return rows.map((r) => ({ ...r, excludedWeekdays: r.excludedWeekdays ?? [] }));
+}
+
+/**
+ * Distinct work-block labels the user has typed anywhere — across the Template
+ * and every Day Record — for the label autocomplete (ADR 0003). Deduped case-
+ * insensitively (most-recent casing wins), most-recently-used first.
+ */
+export async function getLabelSuggestions(userId: string): Promise<string[]> {
+  const [tmpl, day] = await Promise.all([
+    db
+      .select({ label: templateBlocks.label, createdAt: templateBlocks.createdAt })
+      .from(templateBlocks)
+      .where(and(eq(templateBlocks.userId, userId), eq(templateBlocks.kind, "work"))),
+    db
+      .select({ label: dayBlocks.label, createdAt: dayBlocks.createdAt })
+      .from(dayBlocks)
+      .where(and(eq(dayBlocks.userId, userId), eq(dayBlocks.kind, "work"))),
+  ]);
+
+  const rows = [...tmpl, ...day]
+    .filter((r) => r.label && r.label.trim())
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const r of rows) {
+    const label = r.label!.trim();
+    const key = label.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(label);
+  }
+  return out;
 }
 
 /**
@@ -136,8 +157,8 @@ export async function getOrCreateDay(
 }
 
 /**
- * Snapshots the current Template into a day, skipping weekday-excluded task
- * types. Returns the number of blocks inserted. `basePosition` lets it append
+ * Snapshots the current Template into a day, skipping Blocks excluded on that
+ * weekday. Returns the number of blocks inserted. `basePosition` lets it append
  * after any blocks already present (e.g. an ad-hoc block on a not-yet-seeded day).
  */
 async function seedDayFromTemplate(
@@ -148,22 +169,15 @@ async function seedDayFromTemplate(
 ): Promise<number> {
   const weekday = weekdayOf(localDate);
   const template = await getTemplateBlocks(userId);
-  const types = await getTaskTypes(userId);
-  const excludedByType = new Map(
-    types.map((t) => [t.id, (t.excludedWeekdays ?? []).includes(weekday)]),
-  );
 
   const toInsert = template
-    .filter(
-      (b) => !(b.kind === "work" && b.taskTypeId && excludedByType.get(b.taskTypeId)),
-    )
+    .filter((b) => !b.excludedWeekdays.includes(weekday))
     .map((b, i) => ({
       id: newId(),
       dayRecordId: recordId,
       userId,
       kind: b.kind,
-      taskTypeId: b.kind === "work" ? b.taskTypeId : null,
-      label: b.kind === "work" ? b.taskTypeLabel ?? b.label ?? "" : b.label ?? "",
+      label: b.label ?? "",
       durationHours: b.durationHours,
       done: false,
       isAdhoc: false,

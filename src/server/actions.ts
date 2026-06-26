@@ -1,12 +1,10 @@
 "use server";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import {
   dayBlocks,
-  dayRecords,
-  taskTypes,
   templateBlocks,
   userSettings,
 } from "@/db/schema";
@@ -27,81 +25,39 @@ function clampHours(value: unknown): number {
   return Math.round(n * 100) / 100;
 }
 
-async function nextPosition(
-  table: typeof templateBlocks | typeof taskTypes,
-  userId: string,
-): Promise<number> {
+function cleanWeekdays(days: number[] | undefined): number[] {
+  if (!days) return [];
+  return [...new Set(days.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort(
+    (a, b) => a - b,
+  );
+}
+
+async function nextTemplatePosition(userId: string): Promise<number> {
   const rows = await db
-    .select({ max: sql<number>`coalesce(max(${table.position}), -1)` })
-    .from(table)
-    .where(eq(table.userId, userId));
+    .select({ max: sql<number>`coalesce(max(${templateBlocks.position}), -1)` })
+    .from(templateBlocks)
+    .where(eq(templateBlocks.userId, userId));
   return (rows[0]?.max ?? -1) + 1;
-}
-
-/* ----------------------------- Task Types ----------------------------- */
-
-export async function createTaskType(label: string, targetHours: number) {
-  const userId = await requireUserId();
-  const clean = label.trim();
-  if (!clean) return;
-  await db.insert(taskTypes).values({
-    id: newId(),
-    userId,
-    label: clean,
-    targetHours: clampHours(targetHours),
-    position: await nextPosition(taskTypes, userId),
-  });
-  refreshAll();
-}
-
-export async function updateTaskType(
-  id: string,
-  data: { label?: string; targetHours?: number; excludedWeekdays?: number[] },
-) {
-  const userId = await requireUserId();
-  const patch: Record<string, unknown> = {};
-  if (data.label !== undefined) patch.label = data.label.trim();
-  if (data.targetHours !== undefined) patch.targetHours = clampHours(data.targetHours);
-  if (data.excludedWeekdays !== undefined) {
-    patch.excludedWeekdays = data.excludedWeekdays
-      .filter((d) => Number.isInteger(d) && d >= 0 && d <= 6)
-      .sort((a, b) => a - b);
-  }
-  if (Object.keys(patch).length === 0) return;
-  await db
-    .update(taskTypes)
-    .set(patch)
-    .where(and(eq(taskTypes.id, id), eq(taskTypes.userId, userId)));
-  refreshAll();
-}
-
-export async function deleteTaskType(id: string) {
-  const userId = await requireUserId();
-  // Cascade removes its template blocks; existing Day Records keep their snapshots.
-  await db
-    .delete(taskTypes)
-    .where(and(eq(taskTypes.id, id), eq(taskTypes.userId, userId)));
-  refreshAll();
 }
 
 /* --------------------------- Template Blocks --------------------------- */
 
-export async function addTemplateWorkBlock(taskTypeId: string, durationHours: number) {
+export async function addTemplateWorkBlock(
+  label: string,
+  durationHours: number,
+  excludedWeekdays?: number[],
+) {
   const userId = await requireUserId();
-  // Verify the task type belongs to the user.
-  const owned = await db
-    .select({ id: taskTypes.id })
-    .from(taskTypes)
-    .where(and(eq(taskTypes.id, taskTypeId), eq(taskTypes.userId, userId)))
-    .limit(1);
-  if (!owned[0]) return;
+  const clean = label.trim();
+  if (!clean) return;
   await db.insert(templateBlocks).values({
     id: newId(),
     userId,
     kind: "work",
-    taskTypeId,
+    label: clean,
     durationHours: clampHours(durationHours),
-    position: await nextPosition(templateBlocks, userId),
+    excludedWeekdays: cleanWeekdays(excludedWeekdays),
+    position: await nextTemplatePosition(userId),
   });
   refreshAll();
 }
@@ -112,28 +68,58 @@ export async function addTemplateBreak(durationHours: number, label?: string) {
     id: newId(),
     userId,
     kind: "break",
-    taskTypeId: null,
     label: label?.trim() || null,
     durationHours: clampHours(durationHours),
-    position: await nextPosition(templateBlocks, userId),
+    position: await nextTemplatePosition(userId),
   });
   refreshAll();
 }
 
 export async function updateTemplateBlock(
   id: string,
-  data: { durationHours?: number; taskTypeId?: string; label?: string },
+  data: { durationHours?: number; label?: string; excludedWeekdays?: number[] },
 ) {
   const userId = await requireUserId();
   const patch: Record<string, unknown> = {};
   if (data.durationHours !== undefined) patch.durationHours = clampHours(data.durationHours);
-  if (data.taskTypeId !== undefined) patch.taskTypeId = data.taskTypeId;
   if (data.label !== undefined) patch.label = data.label.trim() || null;
+  if (data.excludedWeekdays !== undefined)
+    patch.excludedWeekdays = cleanWeekdays(data.excludedWeekdays);
   if (Object.keys(patch).length === 0) return;
+
   await db
     .update(templateBlocks)
     .set(patch)
     .where(and(eq(templateBlocks.id, id), eq(templateBlocks.userId, userId)));
+  refreshAll();
+}
+
+/**
+ * One-shot copy of a Block's weekday exclusions onto every other work Block
+ * sharing its label (trimmed, case-insensitive). Blocks stay independent
+ * afterward — this is a copy, not a link (ADR 0003).
+ */
+export async function applyWeekdaysToLabel(id: string, excludedWeekdays: number[]) {
+  const userId = await requireUserId();
+  const source = await db
+    .select({ label: templateBlocks.label })
+    .from(templateBlocks)
+    .where(and(eq(templateBlocks.id, id), eq(templateBlocks.userId, userId)))
+    .limit(1);
+  const label = source[0]?.label?.trim();
+  if (!label) return;
+  const days = cleanWeekdays(excludedWeekdays);
+  await db
+    .update(templateBlocks)
+    .set({ excludedWeekdays: days })
+    .where(
+      and(
+        eq(templateBlocks.userId, userId),
+        eq(templateBlocks.kind, "work"),
+        ne(templateBlocks.id, id),
+        sql`lower(trim(${templateBlocks.label})) = ${label.toLowerCase()}`,
+      ),
+    );
   refreshAll();
 }
 
@@ -220,24 +206,14 @@ export async function addAdhocBlock(
     .where(eq(dayBlocks.dayRecordId, recordId));
   let pos = (posRow[0]?.max ?? -1) + 1;
 
-  let newTaskTypeId: string | null = null;
-
   if (data.promote) {
-    // Promotion: becomes a recurring Template block + a new Task Type.
-    newTaskTypeId = newId();
-    await db.insert(taskTypes).values({
-      id: newTaskTypeId,
-      userId,
-      label,
-      targetHours: duration,
-      position: await nextPosition(taskTypes, userId),
-    });
-    let tPos = await nextPosition(templateBlocks, userId);
+    // Promotion: append the work Block (and its break) to the recurring Template.
+    let tPos = await nextTemplatePosition(userId);
     await db.insert(templateBlocks).values({
       id: newId(),
       userId,
       kind: "work",
-      taskTypeId: newTaskTypeId,
+      label,
       durationHours: duration,
       position: tPos++,
     });
@@ -246,7 +222,7 @@ export async function addAdhocBlock(
         id: newId(),
         userId,
         kind: "break",
-        taskTypeId: null,
+        label: null,
         durationHours: breakDuration,
         position: tPos,
       });
@@ -259,7 +235,6 @@ export async function addAdhocBlock(
     dayRecordId: recordId,
     userId,
     kind: "work",
-    taskTypeId: newTaskTypeId,
     label,
     durationHours: duration,
     done: false,
@@ -272,7 +247,6 @@ export async function addAdhocBlock(
       dayRecordId: recordId,
       userId,
       kind: "break",
-      taskTypeId: null,
       label: "",
       durationHours: breakDuration,
       done: false,

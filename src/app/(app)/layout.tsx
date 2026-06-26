@@ -13,7 +13,9 @@ export default async function AppLayout({
   return (
     <div className="min-h-dvh">
       <Nav dayStartHour={settings.dayStartHour} />
-      <main className="mx-auto max-w-2xl px-4 py-6">{children}</main>
+      <main className="mx-auto w-full max-w-2xl px-4 py-6 transition-[max-width] has-[[data-wide]]:max-w-5xl">
+        {children}
+      </main>
     </div>
   );
 }

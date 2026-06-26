@@ -1,12 +1,12 @@
 import { requireUserId } from "@/lib/session";
-import { getTaskTypes, getTemplateBlocks } from "@/server/queries";
+import { getLabelSuggestions, getTemplateBlocks } from "@/server/queries";
 import { ScheduleEditor } from "@/components/ScheduleEditor";
 
-export default async function SchedulePage() {
+export default async function PlanPage() {
   const userId = await requireUserId();
-  const [template, types] = await Promise.all([
+  const [template, suggestions] = await Promise.all([
     getTemplateBlocks(userId),
-    getTaskTypes(userId),
+    getLabelSuggestions(userId),
   ]);
 
   return (
@@ -14,12 +14,11 @@ export default async function SchedulePage() {
       blocks={template.map((b) => ({
         id: b.id,
         kind: b.kind,
-        taskTypeId: b.taskTypeId,
         label: b.label,
-        taskTypeLabel: b.taskTypeLabel,
         durationHours: b.durationHours,
+        excludedWeekdays: b.excludedWeekdays,
       }))}
-      taskTypes={types.map((t) => ({ id: t.id, label: t.label }))}
+      suggestions={suggestions}
     />
   );
 }

@@ -15,6 +15,13 @@
       "when": 1781696860895,
       "tag": "0001_messy_mattie_franklin",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782518400000,
+      "tag": "0002_free_text_blocks",
+      "breakpoints": true
     }
   ]
 }

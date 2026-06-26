@@ -7,9 +7,11 @@ import { addAdhocBlock } from "@/server/actions";
 
 export function AddTaskDialog({
   date,
+  suggestions,
   onClose,
 }: {
   date: string;
+  suggestions: string[];
   onClose: () => void;
 }) {
   const t = useTranslations("addTask");
@@ -53,11 +55,17 @@ export function AddTaskDialog({
             <input
               autoFocus
               value={label}
+              list="adhoc-label-suggestions"
               placeholder={t("labelPlaceholder")}
               onChange={(e) => setLabel(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && submit()}
               className="auto-dir h-9 rounded-md border border-border bg-surface-2 px-3 text-sm outline-none focus:border-border-strong"
             />
+            <datalist id="adhoc-label-suggestions">
+              {suggestions.map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
           </label>
 
           <label className="flex flex-col gap-1.5">

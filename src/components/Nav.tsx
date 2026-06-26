@@ -15,8 +15,7 @@ export function Nav({ dayStartHour }: { dayStartHour: number }) {
   const today = todayLocalDate(dayStartHour);
   const items = [
     { href: `/day/${today}`, label: t("day"), match: "/day" },
-    { href: "/schedule", label: t("schedule"), match: "/schedule" },
-    { href: "/tasks", label: t("taskTypes"), match: "/tasks" },
+    { href: "/schedule", label: t("plan"), match: "/schedule" },
     { href: "/settings", label: t("settings"), match: "/settings" },
   ];
 

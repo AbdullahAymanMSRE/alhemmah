@@ -37,6 +37,26 @@ export function CheckIcon({ className }: { className?: string }) {
   );
 }
 
+export function CalendarIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="2.5" y="3" width="11" height="10.5" rx="1.5" />
+      <path d="M2.5 6h11M5.5 1.8v2.4M10.5 1.8v2.4" />
+    </svg>
+  );
+}
+
 export function TrashIcon({ className }: { className?: string }) {
   return (
     <svg

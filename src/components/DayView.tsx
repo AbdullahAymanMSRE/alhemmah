@@ -18,7 +18,6 @@ type Block = {
   id: string;
   kind: "work" | "break";
   label: string;
-  taskTypeId: string | null;
   durationHours: number;
   done: boolean;
   isAdhoc: boolean;
@@ -28,11 +27,13 @@ export function DayView({
   date,
   recordId,
   dayStartHour,
+  suggestions,
   blocks,
 }: {
   date: string;
   recordId: string;
   dayStartHour: number;
+  suggestions: string[];
   blocks: Block[];
 }) {
   const t = useTranslations("day");
@@ -54,11 +55,25 @@ export function DayView({
   const today = todayLocalDate(dayStartHour);
   const isToday = date === today;
 
-  const formattedDate = new Intl.DateTimeFormat(locale === "ar" ? "ar" : "en", {
+  const intlLocale = locale === "ar" ? "ar" : "en";
+  const formattedDate = new Intl.DateTimeFormat(intlLocale, {
     weekday: "long",
     day: "numeric",
     month: "long",
   }).format(new Date(`${date}T12:00:00`));
+
+  // Label relative to today ("Today", "Yesterday", "2 days ago", "In 3 days"…).
+  const diffDays = Math.round(
+    (new Date(`${date}T12:00:00`).getTime() -
+      new Date(`${today}T12:00:00`).getTime()) /
+      86_400_000,
+  );
+  const relativeLabel = capitalize(
+    new Intl.RelativeTimeFormat(intlLocale, { numeric: "auto" }).format(
+      diffDays,
+      "day",
+    ),
+  );
 
   // Summary over work blocks only (breaks aren't tasks).
   const work = items.filter((b) => b.kind === "work");
@@ -115,13 +130,14 @@ export function DayView({
         <div className="flex flex-col items-center">
           <span className="auto-dir text-sm font-semibold">{formattedDate}</span>
           {isToday ? (
-            <span className="text-xs text-accent">{t("today")}</span>
+            <span className="text-xs text-accent">{relativeLabel}</span>
           ) : (
             <button
               onClick={() => router.push(`/day/${today}`)}
-              className="text-xs text-muted hover:text-foreground"
+              className="text-xs text-accent hover:underline"
+              title={t("goToToday")}
             >
-              {t("goToToday")}
+              {relativeLabel}
             </button>
           )}
         </div>
@@ -257,11 +273,21 @@ export function DayView({
         + {t("addTask")}
       </button>
 
-      {adding && <AddTaskDialog date={date} onClose={() => setAdding(false)} />}
+      {adding && (
+        <AddTaskDialog
+          date={date}
+          suggestions={suggestions}
+          onClose={() => setAdding(false)}
+        />
+      )}
     </div>
   );
 }
 
 function round(n: number) {
   return Math.round(n * 100) / 100;
+}
+
+function capitalize(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
