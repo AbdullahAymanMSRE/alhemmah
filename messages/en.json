@@ -39,7 +39,7 @@
     "setUpSchedule": "Set up schedule",
     "addTask": "Add task",
     "break": "Break",
-    "doneOfTotal": "{done} of {total} h done",
+    "doneOfTotal": "{done} of {total} done",
     "summary": "Summary",
     "reorderHint": "Drag to reorder (this day only)"
   },
@@ -47,9 +47,9 @@
     "title": "Add a task to this day",
     "label": "Task name",
     "labelPlaceholder": "e.g. Review notes",
-    "duration": "Duration (hours)",
+    "duration": "Duration",
     "withBreak": "Add a break after it",
-    "breakDuration": "Break (hours)",
+    "breakDuration": "Break",
     "promote": "Add to my standard day",
     "promoteHint": "Also adds it to every future day.",
     "cancel": "Cancel",
@@ -64,10 +64,10 @@
     "emptyHint": "Add tasks and breaks to build your day.",
     "workLabel": "Task",
     "labelPlaceholder": "e.g. Work",
-    "duration": "Hours",
-    "totalPlanned": "Total planned: {hours} h",
+    "duration": "Duration",
+    "totalPlanned": "Total planned: {hours}",
     "totalsTitle": "Totals",
-    "hoursShort": "{hours} h",
+    "hoursShort": "{hours}",
     "skipOn": "Skip on",
     "applyToAll": "Apply to all “{label}”",
     "delete": "Delete",
@@ -96,6 +96,9 @@
   "common": {
     "loading": "Loading…",
     "saving": "Saving…",
-    "hours": "h"
+    "hours": "h",
+    "hUnit": "h",
+    "mUnit": "m",
+    "dayFull": "Day is full — 24 h max"
   }
 }

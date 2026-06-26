@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { DurationInput } from "@/components/DurationInput";
 import { addAdhocBlock } from "@/server/actions";
 
 export function AddTaskDialog({
@@ -18,9 +19,9 @@ export function AddTaskDialog({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [label, setLabel] = useState("");
-  const [duration, setDuration] = useState("1");
+  const [duration, setDuration] = useState(1);
   const [withBreak, setWithBreak] = useState(false);
-  const [breakDuration, setBreakDuration] = useState("0.25");
+  const [breakDuration, setBreakDuration] = useState(0.25);
   const [promote, setPromote] = useState(false);
 
   function submit() {
@@ -28,9 +29,9 @@ export function AddTaskDialog({
     start(async () => {
       await addAdhocBlock(date, {
         label,
-        durationHours: Number(duration) || 0,
+        durationHours: duration,
         withBreak,
-        breakDuration: Number(breakDuration) || 0,
+        breakDuration,
         promote,
       });
       router.refresh();
@@ -68,17 +69,10 @@ export function AddTaskDialog({
             </datalist>
           </label>
 
-          <label className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-muted">{t("duration")}</span>
-            <input
-              type="number"
-              min={0}
-              step={0.25}
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              className="h-9 w-24 rounded-md border border-border bg-surface-2 px-3 text-sm tabular-nums outline-none focus:border-border-strong"
-            />
-          </label>
+            <DurationInput valueHours={duration} onChange={setDuration} ariaLabel={t("duration")} />
+          </div>
 
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -90,17 +84,14 @@ export function AddTaskDialog({
             <span className="text-muted">{t("withBreak")}</span>
           </label>
           {withBreak && (
-            <label className="flex flex-col gap-1.5 ps-6">
+            <div className="flex flex-col gap-1.5 ps-6">
               <span className="text-xs font-medium text-muted">{t("breakDuration")}</span>
-              <input
-                type="number"
-                min={0}
-                step={0.25}
-                value={breakDuration}
-                onChange={(e) => setBreakDuration(e.target.value)}
-                className="h-9 w-24 rounded-md border border-border bg-surface-2 px-3 text-sm tabular-nums outline-none focus:border-border-strong"
+              <DurationInput
+                valueHours={breakDuration}
+                onChange={setBreakDuration}
+                ariaLabel={t("breakDuration")}
               />
-            </label>
+            </div>
           )}
 
           <label className="flex items-start gap-2 text-sm">

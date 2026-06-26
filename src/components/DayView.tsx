@@ -7,6 +7,7 @@ import { SortableList } from "@/components/SortableList";
 import { AddTaskDialog } from "@/components/AddTaskDialog";
 import { CheckIcon, GripIcon, TrashIcon } from "@/components/icons";
 import { addDays, todayLocalDate } from "@/lib/dates";
+import { formatDuration } from "@/lib/duration";
 import { cn } from "@/lib/cn";
 import {
   deleteDayBlock,
@@ -37,6 +38,8 @@ export function DayView({
   blocks: Block[];
 }) {
   const t = useTranslations("day");
+  const tc = useTranslations("common");
+  const units = { h: tc("hUnit"), m: tc("mUnit") };
   const locale = useLocale();
   const router = useRouter();
   const [, start] = useTransition();
@@ -74,6 +77,9 @@ export function DayView({
       "day",
     ),
   );
+
+  // The 24h cap counts every block (work + breaks).
+  const dayFull = items.reduce((s, b) => s + b.durationHours, 0) >= 24;
 
   // Summary over work blocks only (breaks aren't tasks).
   const work = items.filter((b) => b.kind === "work");
@@ -168,7 +174,10 @@ export function DayView({
               {t("summary")}
             </span>
             <span className="text-sm tabular-nums text-muted">
-              {t("doneOfTotal", { done: doneH, total: totalH })}
+              {t("doneOfTotal", {
+                done: formatDuration(doneH, units),
+                total: formatDuration(totalH, units),
+              })}
             </span>
           </div>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2">
@@ -182,7 +191,7 @@ export function DayView({
               <li key={label} className="flex justify-between text-xs">
                 <span className="auto-dir text-muted">{label}</span>
                 <span className="tabular-nums text-faint">
-                  {round(v.done)}/{round(v.total)}
+                  {formatDuration(v.done, units)}/{formatDuration(v.total, units)}
                 </span>
               </li>
             ))}
@@ -251,7 +260,7 @@ export function DayView({
               </span>
 
               <span className="shrink-0 text-xs tabular-nums text-faint">
-                {b.durationHours}
+                {formatDuration(b.durationHours, units)}
               </span>
 
               <button
@@ -266,12 +275,18 @@ export function DayView({
         />
       )}
 
-      <button
-        onClick={() => setAdding(true)}
-        className="rounded-lg border border-dashed border-border-strong bg-surface/50 py-3 text-sm font-medium text-muted transition-colors hover:text-foreground"
-      >
-        + {t("addTask")}
-      </button>
+      {dayFull ? (
+        <p className="rounded-lg border border-dashed border-border py-3 text-center text-xs text-faint">
+          {tc("dayFull")}
+        </p>
+      ) : (
+        <button
+          onClick={() => setAdding(true)}
+          className="rounded-lg border border-dashed border-border-strong bg-surface/50 py-3 text-sm font-medium text-muted transition-colors hover:text-foreground"
+        >
+          + {t("addTask")}
+        </button>
+      )}
 
       {adding && (
         <AddTaskDialog

@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { SortableList } from "@/components/SortableList";
+import { DurationInput } from "@/components/DurationInput";
 import { CalendarIcon, GripIcon, TrashIcon } from "@/components/icons";
+import { formatDuration } from "@/lib/duration";
 import { cn } from "@/lib/cn";
 import {
   addTemplateBreak,
@@ -35,10 +37,11 @@ export function ScheduleEditor({
 }) {
   const t = useTranslations("schedule");
   const td = useTranslations("day");
+  const tc = useTranslations("common");
+  const units = { h: tc("hUnit"), m: tc("mUnit") };
   const router = useRouter();
   const [, start] = useTransition();
   const [items, setItems] = useState(blocks);
-  const [durationDrafts, setDurationDrafts] = useState<Record<string, string>>({});
   const [labelDrafts, setLabelDrafts] = useState<Record<string, string>>({});
 
   // Resync local order/values whenever the server data changes (after refresh).
@@ -51,7 +54,6 @@ export function ScheduleEditor({
   );
   useEffect(() => {
     setItems(blocks);
-    setDurationDrafts({});
     setLabelDrafts({});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sig]);
@@ -83,21 +85,16 @@ export function ScheduleEditor({
     });
   }
 
-  function commitDuration(id: string, raw: string) {
+  function commitDuration(id: string, value: number) {
     const b = items.find((x) => x.id === id);
     if (!b) return;
-    const value = Math.max(0, round2(Number(raw) || 0));
-    setDurationDrafts((d) => {
-      const n = { ...d };
-      delete n[id];
-      return n;
-    });
-    if (value === b.durationHours) return;
+    const v = Math.max(0, round2(value));
+    if (v === b.durationHours) return;
     setItems((prev) =>
-      prev.map((x) => (x.id === id ? { ...x, durationHours: value } : x)),
+      prev.map((x) => (x.id === id ? { ...x, durationHours: v } : x)),
     );
     start(async () => {
-      await updateTemplateBlock(id, { durationHours: value });
+      await updateTemplateBlock(id, { durationHours: v });
       router.refresh();
     });
   }
@@ -162,8 +159,16 @@ export function ScheduleEditor({
           <p className="mt-1 text-sm text-muted">{t("subtitle")}</p>
         </div>
         {items.length > 0 && (
-          <span className="shrink-0 whitespace-nowrap rounded-md border border-border bg-surface px-2.5 py-1 text-xs tabular-nums text-muted">
-            {t("totalPlanned", { hours: total })}
+          <span
+            className={cn(
+              "shrink-0 whitespace-nowrap rounded-md border bg-surface px-2.5 py-1 text-xs tabular-nums",
+              total >= 24
+                ? "border-danger/40 text-danger"
+                : "border-border text-muted",
+            )}
+            title={total >= 24 ? tc("dayFull") : undefined}
+          >
+            {t("totalPlanned", { hours: formatDuration(total, units) })}
           </span>
         )}
       </header>
@@ -178,7 +183,7 @@ export function ScheduleEditor({
               <li key={row.label} className="flex justify-between text-xs">
                 <span className="auto-dir text-muted">{row.label}</span>
                 <span className="tabular-nums text-faint">
-                  {t("hoursShort", { hours: row.hours })}
+                  {t("hoursShort", { hours: formatDuration(row.hours, units) })}
                 </span>
               </li>
             ))}
@@ -232,17 +237,10 @@ export function ScheduleEditor({
                   </span>
                 )}
 
-                <input
-                  type="number"
-                  min={0}
-                  step={0.25}
-                  value={durationDrafts[b.id] ?? String(b.durationHours)}
-                  onChange={(e) =>
-                    setDurationDrafts((d) => ({ ...d, [b.id]: e.target.value }))
-                  }
-                  onBlur={(e) => commitDuration(b.id, e.target.value)}
-                  className="h-9 w-16 rounded-md border border-border bg-surface-2 px-2 text-sm tabular-nums outline-none focus:border-border-strong"
-                  aria-label={t("duration")}
+                <DurationInput
+                  valueHours={b.durationHours}
+                  onChange={(hours) => commitDuration(b.id, hours)}
+                  ariaLabel={t("duration")}
                 />
 
                 <WeekdayDisclosure
@@ -347,23 +345,23 @@ function AddBlocks() {
   const router = useRouter();
   const [, start] = useTransition();
   const [label, setLabel] = useState("");
-  const [workDur, setWorkDur] = useState("1");
-  const [breakDur, setBreakDur] = useState("0.25");
+  const [workDur, setWorkDur] = useState(1);
+  const [breakDur, setBreakDur] = useState(0.25);
 
   function addWork() {
     const clean = label.trim();
     if (!clean) return;
-    const value = Math.max(0, round2(Number(workDur) || 0));
+    const value = Math.max(0, round2(workDur));
     start(async () => {
       await addTemplateWorkBlock(clean, value);
       setLabel("");
-      setWorkDur("1");
+      setWorkDur(1);
       router.refresh();
     });
   }
   function addBreak() {
     start(async () => {
-      await addTemplateBreak(Number(breakDur) || 0);
+      await addTemplateBreak(Math.max(0, round2(breakDur)));
       router.refresh();
     });
   }
@@ -382,17 +380,10 @@ function AddBlocks() {
             className="auto-dir h-9 rounded-md border border-border bg-surface-2 px-2 text-sm outline-none focus:border-border-strong"
           />
         </label>
-        <label className="flex w-16 flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-muted">{t("duration")}</span>
-          <input
-            type="number"
-            min={0}
-            step={0.25}
-            value={workDur}
-            onChange={(e) => setWorkDur(e.target.value)}
-            className="h-9 rounded-md border border-border bg-surface-2 px-2 text-sm tabular-nums outline-none focus:border-border-strong"
-          />
-        </label>
+          <DurationInput valueHours={workDur} onChange={setWorkDur} ariaLabel={t("duration")} />
+        </div>
         <button
           onClick={addWork}
           disabled={!label.trim()}
@@ -403,17 +394,10 @@ function AddBlocks() {
       </div>
 
       <div className="flex items-end gap-2 border-t border-border pt-3">
-        <label className="flex w-16 flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-muted">{t("duration")}</span>
-          <input
-            type="number"
-            min={0}
-            step={0.25}
-            value={breakDur}
-            onChange={(e) => setBreakDur(e.target.value)}
-            className="h-9 rounded-md border border-border bg-surface-2 px-2 text-sm tabular-nums outline-none focus:border-border-strong"
-          />
-        </label>
+          <DurationInput valueHours={breakDur} onChange={setBreakDur} ariaLabel={t("duration")} />
+        </div>
         <button
           onClick={addBreak}
           className="h-9 rounded-md border border-border-strong bg-surface px-3 text-sm font-medium transition-colors hover:bg-surface-2"

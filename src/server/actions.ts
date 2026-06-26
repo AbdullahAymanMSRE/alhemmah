@@ -19,10 +19,43 @@ function refreshAll() {
   revalidatePath("/", "layout");
 }
 
+const MAX_DAY_HOURS = 24;
+
 function clampHours(value: unknown): number {
   const n = typeof value === "number" ? value : parseFloat(String(value));
   if (!Number.isFinite(n) || n < 0) return 0;
   return Math.round(n * 100) / 100;
+}
+
+/** Hours still available in a 24h day, given an already-used total. */
+function remainingHours(usedHours: number): number {
+  return Math.max(0, Math.round((MAX_DAY_HOURS - usedHours) * 100) / 100);
+}
+
+/** Sum of every template block's hours, optionally excluding one block. */
+async function templateTotalHours(userId: string, excludeId?: string): Promise<number> {
+  const rows = await db
+    .select({ sum: sql<number>`coalesce(sum(${templateBlocks.durationHours}), 0)` })
+    .from(templateBlocks)
+    .where(
+      excludeId
+        ? and(eq(templateBlocks.userId, userId), ne(templateBlocks.id, excludeId))
+        : eq(templateBlocks.userId, userId),
+    );
+  return Number(rows[0]?.sum ?? 0);
+}
+
+/** Sum of every block's hours on one day record, optionally excluding one block. */
+async function dayTotalHours(recordId: string, excludeId?: string): Promise<number> {
+  const rows = await db
+    .select({ sum: sql<number>`coalesce(sum(${dayBlocks.durationHours}), 0)` })
+    .from(dayBlocks)
+    .where(
+      excludeId
+        ? and(eq(dayBlocks.dayRecordId, recordId), ne(dayBlocks.id, excludeId))
+        : eq(dayBlocks.dayRecordId, recordId),
+    );
+  return Number(rows[0]?.sum ?? 0);
 }
 
 function cleanWeekdays(days: number[] | undefined): number[] {
@@ -50,12 +83,17 @@ export async function addTemplateWorkBlock(
   const userId = await requireUserId();
   const clean = label.trim();
   if (!clean) return;
+  const duration = Math.min(
+    clampHours(durationHours),
+    remainingHours(await templateTotalHours(userId)),
+  );
+  if (duration <= 0) return; // day already full
   await db.insert(templateBlocks).values({
     id: newId(),
     userId,
     kind: "work",
     label: clean,
-    durationHours: clampHours(durationHours),
+    durationHours: duration,
     excludedWeekdays: cleanWeekdays(excludedWeekdays),
     position: await nextTemplatePosition(userId),
   });
@@ -64,12 +102,17 @@ export async function addTemplateWorkBlock(
 
 export async function addTemplateBreak(durationHours: number, label?: string) {
   const userId = await requireUserId();
+  const duration = Math.min(
+    clampHours(durationHours),
+    remainingHours(await templateTotalHours(userId)),
+  );
+  if (duration <= 0) return; // day already full
   await db.insert(templateBlocks).values({
     id: newId(),
     userId,
     kind: "break",
     label: label?.trim() || null,
-    durationHours: clampHours(durationHours),
+    durationHours: duration,
     position: await nextTemplatePosition(userId),
   });
   refreshAll();
@@ -81,7 +124,13 @@ export async function updateTemplateBlock(
 ) {
   const userId = await requireUserId();
   const patch: Record<string, unknown> = {};
-  if (data.durationHours !== undefined) patch.durationHours = clampHours(data.durationHours);
+  if (data.durationHours !== undefined) {
+    const used = await templateTotalHours(userId, id);
+    patch.durationHours = Math.min(
+      clampHours(data.durationHours),
+      remainingHours(used),
+    );
+  }
   if (data.label !== undefined) patch.label = data.label.trim() || null;
   if (data.excludedWeekdays !== undefined)
     patch.excludedWeekdays = cleanWeekdays(data.excludedWeekdays);
@@ -195,11 +244,18 @@ export async function addAdhocBlock(
   const userId = await requireUserId();
   const label = data.label.trim();
   if (!label) return;
-  const duration = clampHours(data.durationHours);
-  const breakDuration = clampHours(data.breakDuration);
 
   // Ensure the day exists (snapshot created if first visit), then append blocks.
   const { recordId } = await getOrCreateDay(userId, localDate);
+
+  // Fit the new work block (and its break) into whatever the day has left of 24h.
+  const dayLeft = remainingHours(await dayTotalHours(recordId));
+  const duration = Math.min(clampHours(data.durationHours), dayLeft);
+  if (duration <= 0) return; // day already full
+  const breakDuration = data.withBreak
+    ? Math.min(clampHours(data.breakDuration), clampHours(dayLeft - duration))
+    : 0;
+
   const posRow = await db
     .select({ max: sql<number>`coalesce(max(${dayBlocks.position}), -1)` })
     .from(dayBlocks)
@@ -207,25 +263,31 @@ export async function addAdhocBlock(
   let pos = (posRow[0]?.max ?? -1) + 1;
 
   if (data.promote) {
-    // Promotion: append the work Block (and its break) to the recurring Template.
+    // Promotion: append the work Block (and its break) to the recurring Template,
+    // each capped to the template's own remaining 24h.
+    const tLeft = remainingHours(await templateTotalHours(userId));
+    const tDuration = Math.min(duration, tLeft);
     let tPos = await nextTemplatePosition(userId);
-    await db.insert(templateBlocks).values({
-      id: newId(),
-      userId,
-      kind: "work",
-      label,
-      durationHours: duration,
-      position: tPos++,
-    });
-    if (data.withBreak && breakDuration > 0) {
+    if (tDuration > 0) {
       await db.insert(templateBlocks).values({
         id: newId(),
         userId,
-        kind: "break",
-        label: null,
-        durationHours: breakDuration,
-        position: tPos,
+        kind: "work",
+        label,
+        durationHours: tDuration,
+        position: tPos++,
       });
+      const tBreak = Math.min(breakDuration, clampHours(tLeft - tDuration));
+      if (data.withBreak && tBreak > 0) {
+        await db.insert(templateBlocks).values({
+          id: newId(),
+          userId,
+          kind: "break",
+          label: null,
+          durationHours: tBreak,
+          position: tPos,
+        });
+      }
     }
   }
 
