@@ -32,6 +32,8 @@ export default async function DayPage({
         durationHours: b.durationHours,
         done: b.done,
         isAdhoc: b.isAdhoc,
+        trackedSeconds: b.trackedSeconds,
+        runningSince: b.runningSince ? b.runningSince.getTime() : null,
       }))}
     />
   );

@@ -41,7 +41,19 @@
     "break": "Break",
     "doneOfTotal": "{done} of {total} done",
     "summary": "Summary",
-    "reorderHint": "Drag to reorder (this day only)"
+    "reorderHint": "Drag to reorder (this day only)",
+    "timer": {
+      "start": "Start timer",
+      "pause": "Pause timer",
+      "edit": "Edit tracked time",
+      "reset": "Reset timer",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "notify": {
+      "workDone": "{label} — finished",
+      "breakDone": "Break finished"
+    }
   },
   "addTask": {
     "title": "Add a task to this day",

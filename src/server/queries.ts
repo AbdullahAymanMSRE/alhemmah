@@ -10,6 +10,7 @@ import {
 } from "@/db/schema";
 import { newId } from "@/lib/ids";
 import { weekdayOf } from "@/lib/dates";
+import { settleTimers, targetSecondsOf, type TimerState } from "@/lib/timer";
 
 /* All functions here are scoped by userId — the authorization boundary (ADR 0001). */
 
@@ -123,7 +124,8 @@ export async function getOrCreateDay(
         blocks = await loadDayBlocks(record.id);
       }
     }
-    return { recordId: record.id, blocks };
+    await settleDayRecordTimers(record.id);
+    return { recordId: record.id, blocks: await loadDayBlocks(record.id) };
   }
 
   const recordId = newId();
@@ -196,4 +198,51 @@ async function loadDayBlocks(dayRecordId: string): Promise<DayBlock[]> {
     .from(dayBlocks)
     .where(eq(dayBlocks.dayRecordId, dayRecordId))
     .orderBy(asc(dayBlocks.position), asc(dayBlocks.createdAt));
+}
+
+function toTimerState(b: DayBlock): TimerState {
+  return {
+    id: b.id,
+    kind: b.kind,
+    label: b.label,
+    done: b.done,
+    targetSeconds: targetSecondsOf(b.durationHours),
+    trackedSeconds: b.trackedSeconds,
+    runningSinceMs: b.runningSince ? b.runningSince.getTime() : null,
+  };
+}
+
+/**
+ * Reconcile a day's timers to the current wall clock (ADR 0004), persisting any
+ * target-crossings, hand-offs, and auto-done flips. Idempotent: a no-op when no
+ * timer is running or none has reached its target. Runs on every day load so a
+ * day reopened after the app was closed reflects the time that actually passed.
+ */
+export async function settleDayRecordTimers(dayRecordId: string): Promise<void> {
+  const rows = await loadDayBlocks(dayRecordId);
+  const before = rows.map(toTimerState);
+  const { changed, blocks } = settleTimers(before, Date.now());
+  if (!changed) return;
+
+  await Promise.all(
+    blocks.map((nb, idx) => {
+      const ob = before[idx];
+      if (
+        nb.done === ob.done &&
+        nb.trackedSeconds === ob.trackedSeconds &&
+        nb.runningSinceMs === ob.runningSinceMs
+      ) {
+        return null;
+      }
+      return db
+        .update(dayBlocks)
+        .set({
+          done: nb.done,
+          trackedSeconds: Math.round(nb.trackedSeconds),
+          runningSince:
+            nb.runningSinceMs == null ? null : new Date(nb.runningSinceMs),
+        })
+        .where(eq(dayBlocks.id, nb.id));
+    }),
+  );
 }

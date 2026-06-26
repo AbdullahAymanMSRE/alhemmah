@@ -162,6 +162,12 @@ export const dayBlocks = pgTable(
     durationHours: doublePrecision("duration_hours").notNull().default(0),
     done: boolean("done").notNull().default(false),
     isAdhoc: boolean("is_adhoc").notNull().default(false),
+    // Timer (ADR 0004). `trackedSeconds` is the accumulated wall-clock time on this
+    // block; when `runningSince` is set the timer is live and current elapsed is
+    // trackedSeconds + (now - runningSince). At most one block per day record runs
+    // at a time. Tracked time is independent of `done`.
+    trackedSeconds: integer("tracked_seconds").notNull().default(0),
+    runningSince: timestamp("running_since"),
     position: integer("position").notNull().default(0),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },

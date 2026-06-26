@@ -28,8 +28,8 @@ export function Nav({ dayStartHour }: { dayStartHour: number }) {
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-2xl items-center gap-1 px-4">
-        <span className="me-2 text-sm font-semibold tracking-tight">Tasker</span>
-        <nav className="flex flex-1 items-center gap-1">
+        <span className="me-3 text-lg font-bold tracking-tight">Tasker</span>
+        <nav className="flex flex-1 items-center justify-center gap-1">
           {items.map((item) => {
             const active = pathname.startsWith(item.match);
             return (

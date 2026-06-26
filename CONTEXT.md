@@ -22,6 +22,30 @@ split into 2 + 1.5 + 1.5); the app sums their durations into a single total rath
 listing the label more than once. There is no budget or cap on a task's hours.
 _Avoid_: "Task Type" (removed — see ADR 0003).
 
+### Tracked time
+The actual elapsed time accrued on a Block via its **timer** — distinct from the block's
+planned duration. Optional: a block can be ticked done with no tracked time at all, and the
+timer is never required. The timer is **wall-clock** (counts real elapsed time even while the
+app is closed) and **exclusive** (at most one Block's timer runs at a time per day; starting
+one pauses any other). Live start/stop exists only on **today**; past days are read-only.
+The planned duration acts as the timer's **target**; when tracked time reaches it the Block is
+auto-marked **done** and a browser notification fires.
+
+On reaching target a **Task block's** timer **hands off**: it freezes the finished block at
+exactly its target and resumes on the **next not-done block sharing the same task** (same label
+— trimmed, case-insensitive — later in the day's order), so a task split across several blocks
+times as one continuous session that ticks off each block in turn. Breaks are invisible to the
+hand-off (skipped over, never a hand-off target). Only when no later same-task block remains
+does the timer keep running **in place** as overtime.
+
+A **Break's** timer also notifies and auto-marks done at target, but never hands off — it just
+runs **in place** as overtime (you have run over your break).
+
+Each Block shows its own **numeric** tracked/target time (e.g. `1h 42m / 1h 30m`, where the
+surplus reads as overtime) alongside a progress bar that fills toward target and caps at 100%.
+The per-day Summary total is unchanged by this feature.
+_Avoid_: "stopwatch" (the target makes it a countdown-toward-done, not an open stopwatch).
+
 ### Break (استراحة)
 A Block that represents rest, not work. Has a duration and an optional label. Excluded from
 task totals.

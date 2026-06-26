@@ -10,7 +10,8 @@ import {
 } from "@/db/schema";
 import { requireUserId } from "@/lib/session";
 import { newId } from "@/lib/ids";
-import { getOrCreateDay } from "@/server/queries";
+import { getOrCreateDay, settleDayRecordTimers } from "@/server/queries";
+import { liveElapsed, targetSecondsOf, type TimerState } from "@/lib/timer";
 import { setUserLocale, type Locale } from "@/i18n/locale";
 
 /* Every action resolves the user first and scopes all writes by userId (ADR 0001). */
@@ -316,6 +317,108 @@ export async function addAdhocBlock(
       position: pos,
     });
   }
+  refreshAll();
+}
+
+/* ------------------------------ Block Timer ---------------------------- */
+/* Wall-clock, exclusive per day; see ADR 0004. */
+
+/** Load one of the user's day blocks, scoped by userId. */
+async function getDayBlock(userId: string, blockId: string) {
+  const rows = await db
+    .select()
+    .from(dayBlocks)
+    .where(and(eq(dayBlocks.id, blockId), eq(dayBlocks.userId, userId)))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/** Fold every running timer on a day record back into accumulated tracked time. */
+async function pauseRunningOnRecord(recordId: string, now: Date) {
+  const running = await db
+    .select()
+    .from(dayBlocks)
+    .where(and(eq(dayBlocks.dayRecordId, recordId), sql`${dayBlocks.runningSince} is not null`));
+  await Promise.all(
+    running.map((b) => {
+      const elapsed = liveElapsed(
+        { runningSinceMs: b.runningSince!.getTime(), trackedSeconds: b.trackedSeconds } as TimerState,
+        now.getTime(),
+      );
+      return db
+        .update(dayBlocks)
+        .set({ trackedSeconds: Math.round(elapsed), runningSince: null })
+        .where(eq(dayBlocks.id, b.id));
+    }),
+  );
+}
+
+/** Start (or resume) a block's timer. Exclusive: pauses any other running timer first. */
+export async function startBlockTimer(blockId: string) {
+  const userId = await requireUserId();
+  const block = await getDayBlock(userId, blockId);
+  if (!block) return;
+  const now = new Date();
+  await pauseRunningOnRecord(block.dayRecordId, now);
+  await db
+    .update(dayBlocks)
+    .set({ runningSince: now })
+    .where(and(eq(dayBlocks.id, blockId), eq(dayBlocks.userId, userId)));
+  refreshAll();
+}
+
+/** Pause a block's timer, keeping its accumulated tracked time. */
+export async function stopBlockTimer(blockId: string) {
+  const userId = await requireUserId();
+  const block = await getDayBlock(userId, blockId);
+  if (!block || !block.runningSince) return;
+  const elapsed = liveElapsed(
+    { runningSinceMs: block.runningSince.getTime(), trackedSeconds: block.trackedSeconds } as TimerState,
+    Date.now(),
+  );
+  await db
+    .update(dayBlocks)
+    .set({ trackedSeconds: Math.round(elapsed), runningSince: null })
+    .where(and(eq(dayBlocks.id, blockId), eq(dayBlocks.userId, userId)));
+  refreshAll();
+}
+
+/**
+ * Set a block's tracked time directly (manual edit). Pauses the timer. Reaching
+ * the target marks the block done, but — unlike the live timer — never notifies
+ * or hands off (ADR 0004).
+ */
+export async function setBlockTracked(blockId: string, seconds: number) {
+  const userId = await requireUserId();
+  const block = await getDayBlock(userId, blockId);
+  if (!block) return;
+  const secs = Math.max(0, Math.round(Number(seconds) || 0));
+  const patch: Record<string, unknown> = { trackedSeconds: secs, runningSince: null };
+  if (secs >= targetSecondsOf(block.durationHours)) patch.done = true;
+  await db
+    .update(dayBlocks)
+    .set(patch)
+    .where(and(eq(dayBlocks.id, blockId), eq(dayBlocks.userId, userId)));
+  refreshAll();
+}
+
+/** Clear a block's tracked time back to zero; leaves `done` untouched. */
+export async function resetBlockTimer(blockId: string) {
+  const userId = await requireUserId();
+  await db
+    .update(dayBlocks)
+    .set({ trackedSeconds: 0, runningSince: null })
+    .where(and(eq(dayBlocks.id, blockId), eq(dayBlocks.userId, userId)));
+  refreshAll();
+}
+
+/**
+ * Reconcile a day's timers to now (target-crossings, hand-offs, auto-done).
+ * Called by the live client when it detects the running block reached target.
+ */
+export async function settleDayTimers(recordId: string) {
+  await requireUserId();
+  await settleDayRecordTimers(recordId);
   refreshAll();
 }
 
