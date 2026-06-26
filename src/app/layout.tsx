@@ -1,10 +1,15 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { GeistMono } from "geist/font/mono";
 import { Aref_Ruqaa, Cairo } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { siteUrl } from "@/lib/site";
 import "./globals.css";
+
+// Google Analytics 4 measurement ID. Loaded in production only, so local dev
+// traffic does not pollute the stats.
+const GA_ID = "G-REG748VVWE";
 
 // Calligraphic Arabic display face, used only for the الهمّة wordmark/logo.
 const logoFont = Aref_Ruqaa({
@@ -112,6 +117,20 @@ export default async function RootLayout({
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}
         </NextIntlClientProvider>
+        {process.env.NODE_ENV === "production" && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="gtag-init" strategy="afterInteractive">
+              {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${GA_ID}');`}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   );
