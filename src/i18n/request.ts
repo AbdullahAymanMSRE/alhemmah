@@ -1,14 +1,14 @@
 import { getRequestConfig } from "next-intl/server";
-import { headers } from "next/headers";
-import { getUserLocale } from "./locale";
+import { hasLocale } from "next-intl";
+import { routing } from "./routing";
 
-// Locale resolution: the middleware sets `x-app-locale` (URL-forced on the public
-// landing pages for SEO, cookie-based in the app). Fall back to the cookie directly
-// in case the middleware didn't run for this request.
-export default getRequestConfig(async () => {
-  const header = (await headers()).get("x-app-locale");
-  const locale =
-    header === "ar" || header === "en" ? header : await getUserLocale();
+// Locale comes from the `[locale]` URL segment (resolved by the proxy/middleware).
+// Fall back to the default if the segment is missing or unknown.
+export default getRequestConfig(async ({ requestLocale }) => {
+  const requested = await requestLocale;
+  const locale = hasLocale(routing.locales, requested)
+    ? requested
+    : routing.defaultLocale;
   return {
     locale,
     messages: (await import(`../../messages/${locale}.json`)).default,

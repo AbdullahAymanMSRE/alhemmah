@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 import { siteUrl } from "@/lib/site";
 import type { SiteLocale } from "@/lib/site";
@@ -33,7 +33,7 @@ export async function Landing({ locale }: { locale: SiteLocale }) {
     { q: t("q4"), a: t("a4") },
   ];
 
-  const otherLocaleHref = locale === "ar" ? "/" : "/ar";
+  const otherLocale = locale === "ar" ? "en" : "ar";
 
   // Structured data: WebSite + free WebApplication + FAQ. Helps rich results.
   const jsonLd = {
@@ -88,7 +88,8 @@ export async function Landing({ locale }: { locale: SiteLocale }) {
           </span>
           <nav className="flex items-center gap-2 text-sm">
             <Link
-              href={otherLocaleHref}
+              href="/"
+              locale={otherLocale}
               className="rounded-md px-3 py-1.5 text-muted transition-colors hover:text-foreground"
             >
               {t("langSwitch")}

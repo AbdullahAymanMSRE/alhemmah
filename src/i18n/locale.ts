@@ -1,17 +1,15 @@
 import { cookies } from "next/headers";
+import type { Locale } from "@/i18n/routing";
 
-export type Locale = "en" | "ar";
+export type { Locale };
 
 const COOKIE = "TASKER_LOCALE";
-export const defaultLocale: Locale = "en";
 
-/** Reads the UI locale from the cookie (no URL prefix; per-user preference). */
-export async function getUserLocale(): Promise<Locale> {
-  const value = (await cookies()).get(COOKIE)?.value;
-  return value === "ar" || value === "en" ? value : defaultLocale;
-}
-
-/** Persists the chosen UI locale to the cookie. */
+/**
+ * Persists the chosen UI locale to the cookie next-intl reads. The locale itself
+ * now lives in the URL ([[i18n/routing]]); this keeps the saved preference in sync
+ * when it is changed from Settings.
+ */
 export async function setUserLocale(locale: Locale): Promise<void> {
   (await cookies()).set(COOKIE, locale, {
     path: "/",

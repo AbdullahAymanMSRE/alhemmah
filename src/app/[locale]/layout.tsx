@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from "next";
+import { notFound } from "next/navigation";
 import Script from "next/script";
 import { GeistMono } from "geist/font/mono";
 import { Aref_Ruqaa, Cairo } from "next/font/google";
-import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { NextIntlClientProvider, hasLocale } from "next-intl";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { routing } from "@/i18n/routing";
 import { siteUrl } from "@/lib/site";
-import "./globals.css";
+import "../globals.css";
 
 // Google Analytics 4 measurement ID. Loaded in production only, so local dev
 // traffic does not pollute the stats.
@@ -28,9 +30,17 @@ const uiFont = Cairo({
   display: "swap",
 });
 
-export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getLocale();
-  const t = await getTranslations("app");
+export function generateStaticParams() {
+  return routing.locales.map((locale) => ({ locale }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "app" });
   const name = t("name");
   const description = t("description");
 
@@ -77,7 +87,7 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: name,
       title: name,
       description,
-      url: "/",
+      url: locale === "ar" ? "/ar" : "/",
       locale: locale === "ar" ? "ar_AR" : "en_US",
       alternateLocale: locale === "ar" ? "en_US" : "ar_AR",
     },
@@ -98,13 +108,18 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-export default async function RootLayout({
+export default async function LocaleLayout({
   children,
+  params,
 }: Readonly<{
   children: React.ReactNode;
+  params: Promise<{ locale: string }>;
 }>) {
-  const locale = await getLocale();
-  const messages = await getMessages();
+  const { locale } = await params;
+  if (!hasLocale(routing.locales, locale)) {
+    notFound();
+  }
+  setRequestLocale(locale);
   const dir = locale === "ar" ? "rtl" : "ltr";
 
   return (
@@ -114,9 +129,7 @@ export default async function RootLayout({
       className={`${uiFont.variable} ${GeistMono.variable} ${logoFont.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <NextIntlClientProvider locale={locale} messages={messages}>
-          {children}
-        </NextIntlClientProvider>
+        <NextIntlClientProvider>{children}</NextIntlClientProvider>
         {process.env.NODE_ENV === "production" && (
           <>
             <Script

@@ -1,16 +1,16 @@
-import { redirect } from "next/navigation";
 import { requireUserId } from "@/lib/session";
 import { getLabelSuggestions, getOrCreateDay, getSettings } from "@/server/queries";
 import { isValidLocalDate } from "@/lib/dates";
 import { DayView } from "@/components/DayView";
+import { redirect } from "@/i18n/navigation";
 
 export default async function DayPage({
   params,
 }: {
-  params: Promise<{ date: string }>;
+  params: Promise<{ locale: string; date: string }>;
 }) {
-  const { date } = await params;
-  if (!isValidLocalDate(date)) redirect("/");
+  const { locale, date } = await params;
+  if (!isValidLocalDate(date)) redirect({ href: "/", locale });
 
   const userId = await requireUserId();
   const settings = await getSettings(userId);

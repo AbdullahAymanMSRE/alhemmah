@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { SortableList } from "@/components/SortableList";
 import { AddTaskDialog } from "@/components/AddTaskDialog";
@@ -354,12 +354,12 @@ export function DayView({
         <div className="rounded-lg border border-border bg-surface p-6 text-center">
           <p className="text-sm">{t("empty")}</p>
           <p className="mt-1 text-xs text-faint">{t("emptyHint")}</p>
-          <a
+          <Link
             href="/schedule"
             className="mt-3 inline-block text-sm text-accent hover:underline"
           >
             {t("setUpSchedule")}
-          </a>
+          </Link>
         </div>
       ) : (
         <SortableList

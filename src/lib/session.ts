@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { getLocale } from "next-intl/server";
+import { redirect } from "@/i18n/navigation";
 import { auth } from "@/lib/auth";
 
 /** Returns the current session (or null). Server-only. */
@@ -13,8 +14,8 @@ export async function getSession() {
  */
 export async function requireUserId(): Promise<string> {
   const session = await getSession();
-  if (!session?.user) {
-    redirect("/sign-in");
-  }
-  return session.user.id;
+  if (session?.user) return session.user.id;
+  // `redirect` throws (NEXT_REDIRECT) at runtime; the `throw` just satisfies the
+  // type checker that this branch never returns.
+  throw redirect({ href: "/sign-in", locale: await getLocale() });
 }

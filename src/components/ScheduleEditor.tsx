@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { SortableList } from "@/components/SortableList";
 import { DurationInput } from "@/components/DurationInput";

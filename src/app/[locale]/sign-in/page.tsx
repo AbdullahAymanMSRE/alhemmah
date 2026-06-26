@@ -1,11 +1,15 @@
-import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { isGoogleConfigured } from "@/lib/auth";
 import { AuthForm } from "@/components/AuthForm";
+import { redirect } from "@/i18n/navigation";
 
-export default async function SignInPage() {
+export default async function SignInPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
   const session = await getSession();
-  if (session?.user) redirect("/");
+  if (session?.user) redirect({ href: "/", locale: (await params).locale });
   return (
     <main className="flex min-h-dvh items-center justify-center p-6">
       <AuthForm mode="sign-in" googleEnabled={isGoogleConfigured} />

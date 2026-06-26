@@ -1,10 +1,10 @@
 "use client";
 
 import { useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { updateSettings } from "@/server/actions";
-import type { Locale } from "@/i18n/locale";
+import type { Locale } from "@/i18n/routing";
 
 export function SettingsForm({
   language,
@@ -17,12 +17,15 @@ export function SettingsForm({
 }) {
   const t = useTranslations("settings");
   const router = useRouter();
+  const pathname = usePathname();
   const [, start] = useTransition();
 
   function setLanguage(lang: Locale) {
     start(async () => {
+      // Persist the preference, then move to the same page under the new locale so
+      // the URL prefix (and thus the whole app) switches language.
       await updateSettings({ language: lang });
-      router.refresh();
+      router.replace(pathname, { locale: lang });
     });
   }
   function setDayStart(hour: number) {
