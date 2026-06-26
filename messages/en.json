@@ -1,8 +1,51 @@
 {
   "app": {
-    "name": "Tasker",
-    "description": "Your daily schedule, checked off and remembered. A bilingual personal routine tracker with a per-day history.",
-    "tagline": "Your daily schedule, checked off and remembered."
+    "name": "Alhemmah",
+    "description": "Alhemmah is a free, bilingual daily schedule and routine tracker. Plan your day in time blocks, run a timer on each task, check off your progress, and keep an editable per-day history, in English and العربية.",
+    "tagline": "Plan your day, time your tasks, and build a routine that sticks."
+  },
+  "landing": {
+    "metaTitle": "Alhemmah: Free Daily Schedule & Routine Tracker (English & Arabic)",
+    "metaDescription": "Build a daily routine that sticks. Alhemmah lets you plan your day in time blocks, run a timer on every task, check off progress, and review your history. Free, no ads, and fully bilingual (English / العربية).",
+    "eyebrow": "Free · Bilingual · No ads",
+    "heroTitle": "Build a daily routine that actually sticks",
+    "heroSubtitle": "Alhemmah turns your ideal day into an ordered set of time blocks, start a timer on each task, check off what you finish, and watch your routine come together. In English and العربية.",
+    "ctaPrimary": "Start free",
+    "ctaSecondary": "Sign in",
+    "featuresTitle": "Everything you need to run your day",
+    "f1Title": "A routine you author once",
+    "f1Body": "Hand-write your standard day as ordered work blocks and breaks. Alhemmah replays it every morning so you never rebuild it.",
+    "f2Title": "A timer on every task",
+    "f2Body": "Start, pause, or edit a built-in timer per block. When a task hits its target it's checked off automatically and the clock hands off to the next block of the same task.",
+    "f3Title": "Progress at a glance",
+    "f3Body": "A live summary totals your hours by task and fills a progress bar as your day unfolds.",
+    "f4Title": "An editable per-day history",
+    "f4Body": "Every day is saved and stays editable. Jump to any date to see what you planned and what you actually did.",
+    "f5Title": "Fully bilingual, RTL-ready",
+    "f5Body": "Switch between English and Arabic instantly, with complete right-to-left support.",
+    "f6Title": "Built around your real day",
+    "f6Body": "Set a day-start hour so late-night work still counts as the previous day, add ad-hoc tasks, and reorder on the fly.",
+    "howTitle": "How it works",
+    "step1Title": "Author your routine",
+    "step1Body": "List your daily tasks and breaks as time blocks, in the order you do them.",
+    "step2Title": "Track your day",
+    "step2Body": "Start the timer on a block and check tasks off as you go. Alhemmah keeps the running total.",
+    "step3Title": "Review and adjust",
+    "step3Body": "Look back at any day, see where your time went, and refine your routine.",
+    "faqTitle": "Frequently asked questions",
+    "q1": "Is Alhemmah free?",
+    "a1": "Yes. Alhemmah is completely free to use, with no ads and no paywall.",
+    "q2": "Does it support Arabic?",
+    "a2": "Yes. The entire app works in both English and Arabic, with full right-to-left (RTL) layout.",
+    "q3": "How is it different from a to-do list?",
+    "a3": "Instead of a flat task list, Alhemmah models your whole day as ordered time blocks with durations, a per-task timer, and a saved daily history, so it tracks your routine, not just one-off tasks.",
+    "q4": "Do I need to install anything?",
+    "a4": "No. Alhemmah runs in your browser and can be added to your home screen as an app.",
+    "ctaTitle": "Ready to take charge of your day?",
+    "ctaBody": "Create a free account and build your first routine in minutes.",
+    "langSwitch": "العربية",
+    "footerTagline": "A free, bilingual daily routine tracker.",
+    "footerRights": "© {year} Alhemmah"
   },
   "nav": {
     "day": "Day",
@@ -39,6 +82,7 @@
     "setUpSchedule": "Set up schedule",
     "addTask": "Add task",
     "break": "Break",
+    "delete": "Delete",
     "doneOfTotal": "{done} of {total} done",
     "summary": "Summary",
     "reorderHint": "Drag to reorder (this day only)",
@@ -51,7 +95,7 @@
       "cancel": "Cancel"
     },
     "notify": {
-      "workDone": "{label} — finished",
+      "workDone": "{label} finished",
       "breakDone": "Break finished"
     }
   },
@@ -111,6 +155,6 @@
     "hours": "h",
     "hUnit": "h",
     "mUnit": "m",
-    "dayFull": "Day is full — 24 h max"
+    "dayFull": "Day is full (24 h max)"
   }
 }

@@ -9,9 +9,9 @@
   --surface-2: #1a1d22;
   --border: #282c33;
   --border-strong: #3a3f47;
-  --foreground: #e8eaed;
-  --muted: #969ca6;
-  --faint: #6a7079;
+  --foreground: #f3f5f7;
+  --muted: #c2c8d0;
+  --faint: #949ba6;
   --accent: #6f8cff;
   --accent-foreground: #0b0c0e;
   --success: #46c98b;
@@ -31,12 +31,18 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-success: var(--success);
   --color-danger: var(--danger);
-  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  /* Cairo for the whole UI, covers both Latin and Arabic. */
+  --font-sans: var(--font-sans-base), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), monospace;
 }
 
 * {
   border-color: var(--border);
+}
+
+/* Scale the whole UI up a touch, rem-based sizes follow. */
+html {
+  font-size: 17px;
 }
 
 body {
@@ -51,13 +57,39 @@ body {
   unicode-bidi: plaintext;
 }
 
-/* Calm focus ring — flat, no glow. */
+/* Loading logo: a bright band sweeps across the wordmark, right to left, on a loop. */
+@keyframes logo-sweep {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+.logo-loading {
+  background-image: linear-gradient(
+    90deg,
+    var(--faint) 0%,
+    var(--faint) 42%,
+    var(--foreground) 50%,
+    var(--faint) 58%,
+    var(--faint) 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: logo-sweep 1.8s linear infinite;
+}
+
+/* Calm focus ring, flat, no glow. */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 
-/* No spinner arrows — duration is typed, not stepped. */
+/* No spinner arrows, duration is typed, not stepped. */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;

@@ -11,7 +11,7 @@ Accepted (supersedes ADR 0002, and the Task Type model in ADR 0001-era `CONTEXT.
 The original model made **Task Type** the source: the user authored a master list of types,
 each with a target total in hours, then arranged those types into Template **Blocks**. ADR 0002
 hardened the target into a budget (a cap enforced at add/grow time, with a "remaining" figure).
-A work Block stored no label of its own — it displayed its type's label via a join, and the
+A work Block stored no label of its own, it displayed its type's label via a join, and the
 type carried the weekday-exclusion rule.
 
 In practice the master list and its budgeting were more ceremony than the user wanted. Authoring
@@ -24,14 +24,14 @@ the schedule, with autocomplete, and to simply see summed hours for repeated lab
 The **Block** becomes self-describing and the **Task Type** entity is removed entirely:
 
 - A work Block stores its own free-text **label**. There is no master list, no per-task target,
-  and **no cap** — any hours are allowed. This reverses ADR 0002's budget gate.
+  and **no cap**, any hours are allowed. This reverses ADR 0002's budget gate.
 - "The same task" is defined by label match (trimmed, case-insensitive). Repeated labels are
   summed into one total in a rollup; rows display the label as typed, totals use a canonical form.
 - Labels autocomplete from the distinct work-Block labels used anywhere (Template + all Day
   Records), most-recently-used first.
 - **Weekday Exclusion** moves from the type onto each Block. A one-shot "apply to all blocks with
   this label" action copies exclusions onto siblings; blocks stay independent afterward (no
-  hidden link — re-introducing a linked entity would resurrect Task Type by the back door).
+  hidden link, re-introducing a linked entity would resurrect Task Type by the back door).
 - Promotion of an ad-hoc Block now appends a Template Block only; it no longer creates a type.
 
 The `task_types` table and the `task_type_id` columns on `template_blocks` and `day_blocks` are

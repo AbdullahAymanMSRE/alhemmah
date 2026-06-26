@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { SortableList } from "@/components/SortableList";
 import { AddTaskDialog } from "@/components/AddTaskDialog";
 import { BlockTimer } from "@/components/BlockTimer";
+import { Tooltip } from "@/components/Tooltip";
 import { CheckIcon, GripIcon, TrashIcon } from "@/components/icons";
 import { addDays, todayLocalDate } from "@/lib/dates";
 import { formatDuration } from "@/lib/duration";
@@ -15,6 +16,7 @@ import {
   deleteDayBlock,
   reorderDayBlocks,
   resetBlockTimer,
+  resyncDayFromTemplate,
   setBlockTracked,
   settleDayTimers,
   startBlockTimer,
@@ -48,8 +50,10 @@ export function DayView({
 }) {
   const t = useTranslations("day");
   const tc = useTranslations("common");
-  const units = { h: tc("hUnit"), m: tc("mUnit") };
   const locale = useLocale();
+  // Arabic puts a (non-breaking) space between number and unit: "5 س"; English is "5h".
+  const unitGap = locale === "ar" ? " " : "";
+  const units = { h: `${unitGap}${tc("hUnit")}`, m: `${unitGap}${tc("mUnit")}` };
   const router = useRouter();
   const [, start] = useTransition();
   const [items, setItems] = useState(blocks);
@@ -76,6 +80,26 @@ export function DayView({
 
   const today = todayLocalDate(dayStartHour);
   const isToday = date === today;
+  const isPast = date < today;
+
+  // A today/future day that is still untouched should mirror the current Plan,
+  // not a stale snapshot taken before the routine was finished. Run once per
+  // record: if pristine, ask the server to re-sync from the Template. Past days
+  // stay frozen. (The server re-checks "pristine" and "content changed".)
+  const resyncedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (resyncedRef.current === recordId || isPast) return;
+    const pristine = items.every(
+      (b) => !b.done && !b.isAdhoc && b.trackedSeconds === 0 && b.runningSince === null,
+    );
+    if (!pristine) return;
+    resyncedRef.current = recordId;
+    start(async () => {
+      const changed = await resyncDayFromTemplate(recordId);
+      if (changed) router.refresh();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recordId, isPast]);
 
   // Live wall clock: ticks once a second only while a timer is running on today.
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -155,7 +179,7 @@ export function DayView({
   const perType = useMemo(() => {
     const map = new Map<string, { done: number; total: number }>();
     for (const b of work) {
-      const key = b.label || "—";
+      const key = b.label || "-";
       const cur = map.get(key) ?? { done: 0, total: 0 };
       cur.total += b.durationHours;
       if (b.done) cur.done += b.durationHours;
@@ -351,13 +375,15 @@ export function DayView({
               )}
             >
               <div className="flex items-center gap-2">
-                <button
-                  {...handle}
-                  className="cursor-grab touch-none rounded p-1 text-faint hover:text-muted active:cursor-grabbing"
-                  aria-label={t("reorderHint")}
-                >
-                  <GripIcon />
-                </button>
+                <Tooltip label={t("reorderHint")}>
+                  <button
+                    {...handle}
+                    className="cursor-grab touch-none rounded p-1 text-faint hover:text-muted active:cursor-grabbing"
+                    aria-label={t("reorderHint")}
+                  >
+                    <GripIcon />
+                  </button>
+                </Tooltip>
 
                 {b.kind === "work" ? (
                   <button
@@ -390,13 +416,15 @@ export function DayView({
                   {formatDuration(b.durationHours, units)}
                 </span>
 
-                <button
-                  onClick={() => remove(b.id)}
-                  className="rounded p-1.5 text-faint transition-colors hover:text-danger"
-                  aria-label="delete"
-                >
-                  <TrashIcon />
-                </button>
+                <Tooltip label={t("delete")}>
+                  <button
+                    onClick={() => remove(b.id)}
+                    className="rounded p-1.5 text-faint transition-colors hover:text-danger"
+                    aria-label={t("delete")}
+                  >
+                    <TrashIcon />
+                  </button>
+                </Tooltip>
               </div>
 
               <BlockTimer

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { PlayIcon, PauseIcon, PencilIcon, ResetIcon } from "@/components/icons";
+import { Tooltip } from "@/components/Tooltip";
 import { formatDuration } from "@/lib/duration";
 import { liveElapsed, targetSecondsOf, type TimerState } from "@/lib/timer";
 import { cn } from "@/lib/cn";
@@ -17,7 +18,7 @@ export type TimerBlock = {
   runningSince: number | null;
 };
 
-/** Seconds as `H:MM:SS` (or `M:SS` under an hour) — the live stopwatch readout. */
+/** Seconds as `H:MM:SS` (or `M:SS` under an hour), the live stopwatch readout. */
 function clock(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
   const h = Math.floor(s / 3600);
@@ -75,18 +76,20 @@ export function BlockTimer({
   return (
     <div className="mt-2 flex items-center gap-2">
       {isToday && (
-        <button
-          onClick={running ? onStop : onStart}
-          className={cn(
-            "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors",
-            running
-              ? "border-accent bg-accent/10 text-accent"
-              : "border-border-strong text-muted hover:text-foreground",
-          )}
-          aria-label={running ? t("timer.pause") : t("timer.start")}
-        >
-          {running ? <PauseIcon /> : <PlayIcon />}
-        </button>
+        <Tooltip label={running ? t("timer.pause") : t("timer.start")}>
+          <button
+            onClick={running ? onStop : onStart}
+            className={cn(
+              "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors",
+              running
+                ? "border-accent bg-accent/10 text-accent"
+                : "border-border-strong text-muted hover:text-foreground",
+            )}
+            aria-label={running ? t("timer.pause") : t("timer.start")}
+          >
+            {running ? <PauseIcon /> : <PlayIcon />}
+          </button>
+        </Tooltip>
       )}
 
       {editing ? (
@@ -128,21 +131,25 @@ export function BlockTimer({
 
           {isToday && (
             <div className="flex shrink-0 items-center">
-              <button
-                onClick={() => setEditing(true)}
-                className="rounded p-1 text-faint transition-colors hover:text-foreground"
-                aria-label={t("timer.edit")}
-              >
-                <PencilIcon />
-              </button>
-              {(block.trackedSeconds > 0 || running) && (
+              <Tooltip label={t("timer.edit")}>
                 <button
-                  onClick={onReset}
-                  className="rounded p-1 text-faint transition-colors hover:text-danger"
-                  aria-label={t("timer.reset")}
+                  onClick={() => setEditing(true)}
+                  className="rounded p-1 text-faint transition-colors hover:text-foreground"
+                  aria-label={t("timer.edit")}
                 >
-                  <ResetIcon />
+                  <PencilIcon />
                 </button>
+              </Tooltip>
+              {(block.trackedSeconds > 0 || running) && (
+                <Tooltip label={t("timer.reset")}>
+                  <button
+                    onClick={onReset}
+                    className="rounded p-1 text-faint transition-colors hover:text-danger"
+                    aria-label={t("timer.reset")}
+                  >
+                    <ResetIcon />
+                  </button>
+                </Tooltip>
               )}
             </div>
           )}
@@ -185,7 +192,7 @@ function TrackedEditor({
         value={h}
         onChange={(e) => setH(e.target.value.replace(/\D/g, ""))}
         className={field}
-        aria-label={`${t("timer.edit")} — ${tc("hUnit")}`}
+        aria-label={`${t("timer.edit")}, ${tc("hUnit")}`}
         autoFocus
       />
       <span className="text-xs text-faint">{tc("hUnit")}</span>
@@ -196,7 +203,7 @@ function TrackedEditor({
         value={m}
         onChange={(e) => setM(e.target.value.replace(/\D/g, ""))}
         className={field}
-        aria-label={`${t("timer.edit")} — ${tc("mUnit")}`}
+        aria-label={`${t("timer.edit")}, ${tc("mUnit")}`}
       />
       <span className="text-xs text-faint">{tc("mUnit")}</span>
       <button

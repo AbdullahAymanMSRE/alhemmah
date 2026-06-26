@@ -56,7 +56,7 @@ export function DurationInput({
         onChange={(e) => setH(e.target.value.replace(/\D/g, ""))}
         onBlur={commit}
         className={field}
-        aria-label={ariaLabel ? `${ariaLabel} — ${tc("hUnit")}` : tc("hUnit")}
+        aria-label={ariaLabel ? `${ariaLabel}, ${tc("hUnit")}` : tc("hUnit")}
       />
       <span className="text-xs text-faint">{tc("hUnit")}</span>
       <input
@@ -68,7 +68,7 @@ export function DurationInput({
         onChange={(e) => setM(e.target.value.replace(/\D/g, ""))}
         onBlur={commit}
         className={field}
-        aria-label={ariaLabel ? `${ariaLabel} — ${tc("mUnit")}` : tc("mUnit")}
+        aria-label={ariaLabel ? `${ariaLabel}, ${tc("mUnit")}` : tc("mUnit")}
       />
       <span className="text-xs text-faint">{tc("mUnit")}</span>
     </div>

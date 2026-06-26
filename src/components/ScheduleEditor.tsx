@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { SortableList } from "@/components/SortableList";
 import { DurationInput } from "@/components/DurationInput";
 import { CalendarIcon, GripIcon, TrashIcon } from "@/components/icons";
@@ -38,7 +38,10 @@ export function ScheduleEditor({
   const t = useTranslations("schedule");
   const td = useTranslations("day");
   const tc = useTranslations("common");
-  const units = { h: tc("hUnit"), m: tc("mUnit") };
+  const locale = useLocale();
+  // Arabic puts a non-breaking space between number and unit: "5 س"; English is "5h".
+  const unitGap = locale === "ar" ? " " : "";
+  const units = { h: `${unitGap}${tc("hUnit")}`, m: `${unitGap}${tc("mUnit")}` };
   const router = useRouter();
   const [, start] = useTransition();
   const [items, setItems] = useState(blocks);

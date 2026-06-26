@@ -36,7 +36,7 @@ as a global invariant:
   (`addTemplateWorkBlock` / `updateTemplateBlock`), since client checks can be bypassed.
 - **Not** enforced when lowering a target: a target may be set below already-scheduled hours.
   This surfaces as negative remaining (shown red), never an error, never auto-trimming.
-- Breaks are unbound — they belong to no type and never count against a budget.
+- Breaks are unbound, they belong to no type and never count against a budget.
 
 ## Consequences
 

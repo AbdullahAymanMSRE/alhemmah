@@ -95,7 +95,7 @@ export const verification = pgTable(
 /* ------------------------------------------------------------------ */
 
 /**
- * Template Block — one entry in the fixed daily timeline. Self-describing:
+ * Template Block, one entry in the fixed daily timeline. Self-describing:
  * kind = 'work' carries its own free-text label and a duration; kind = 'break'
  * carries a duration and an optional label. A Block may be excluded from
  * specific weekdays (ADR 0003).
@@ -120,7 +120,7 @@ export const templateBlocks = pgTable(
 );
 
 /**
- * Day Record — a single calendar day's instance. `localDate` is the date after
+ * Day Record, a single calendar day's instance. `localDate` is the date after
  * applying the user's day-start hour, computed on the client in their timezone.
  */
 export const dayRecords = pgTable(
@@ -143,7 +143,7 @@ export const dayRecords = pgTable(
 );
 
 /**
- * Day Block — a snapshot block belonging to one Day Record. Labels/durations are
+ * Day Block, a snapshot block belonging to one Day Record. Labels/durations are
  * frozen at creation so later Template edits never rewrite history. `done` is the
  * checkbox; ad-hoc blocks are added directly to a day (and may be typeless).
  */
@@ -182,7 +182,7 @@ export const userSettings = pgTable("user_settings", {
     .primaryKey()
     .references(() => user.id, { onDelete: "cascade" }),
   language: text("language", { enum: ["en", "ar"] }).notNull().default("en"),
-  // 0..23 — hour at which a new day begins. Default 0 (midnight).
+  // 0..23, hour at which a new day begins. Default 0 (midnight).
   dayStartHour: integer("day_start_hour").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")

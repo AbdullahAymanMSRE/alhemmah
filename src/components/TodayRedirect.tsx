@@ -11,8 +11,13 @@ export function TodayRedirect({ dayStartHour }: { dayStartHour: number }) {
     router.replace(`/day/${todayLocalDate(dayStartHour)}`);
   }, [router, dayStartHour]);
   return (
-    <div className="flex min-h-dvh items-center justify-center text-muted">
-      <span className="text-sm">…</span>
+    <div className="flex min-h-dvh items-center justify-center">
+      <span
+        dir="rtl"
+        className="logo-loading font-[family-name:var(--font-logo)] text-6xl leading-none"
+      >
+        الهمّة
+      </span>
     </div>
   );
 }

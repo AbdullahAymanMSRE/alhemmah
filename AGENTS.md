@@ -1,12 +1,12 @@
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+This version has breaking changes, APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
 # Package manager: pnpm (required)
 
-This project uses **pnpm** — not npm or yarn. Always use pnpm.
+This project uses **pnpm**, not npm or yarn. Always use pnpm.
 
 - Install: `pnpm install`
 - Run scripts: `pnpm dev`, `pnpm build`, `pnpm db:migrate`, etc.

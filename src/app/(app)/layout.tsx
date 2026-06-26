@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { requireUserId } from "@/lib/session";
 import { getSettings } from "@/server/queries";
 import { Nav } from "@/components/Nav";
+
+// The whole authenticated app is private, keep it out of search indexes.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function AppLayout({
   children,

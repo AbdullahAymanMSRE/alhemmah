@@ -1,6 +1,6 @@
 /**
  * Date helpers. A "local date" is a `YYYY-MM-DD` string in the user's own
- * timezone. There are no clock times in the app — only calendar dates for
+ * timezone. There are no clock times in the app, only calendar dates for
  * bucketing Day Records. Parsing uses noon to dodge DST/UTC edge cases.
  */
 

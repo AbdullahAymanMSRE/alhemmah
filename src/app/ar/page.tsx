@@ -7,27 +7,25 @@ import { Landing } from "@/components/Landing";
 import { landingAlternates } from "@/lib/site";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations({ locale: "en", namespace: "landing" });
+  const t = await getTranslations({ locale: "ar", namespace: "landing" });
   return {
     title: { absolute: t("metaTitle") },
     description: t("metaDescription"),
-    alternates: landingAlternates("en"),
+    alternates: landingAlternates("ar"),
     openGraph: {
       title: t("metaTitle"),
       description: t("metaDescription"),
-      url: "/",
-      locale: "en_US",
+      url: "/ar",
+      locale: "ar_AR",
     },
   };
 }
 
-export default async function Home() {
-  // Logged-in: bounce to today (client-computed local date). Logged-out: the
-  // public English landing, the canonical, indexable entry point.
+export default async function ArabicHome() {
   const session = await getSession();
   if (session?.user) {
     const settings = await getSettings(session.user.id);
     return <TodayRedirect dayStartHour={settings.dayStartHour} />;
   }
-  return <Landing locale="en" />;
+  return <Landing locale="ar" />;
 }

@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-// Shared 1200×630 social card. Dark, flat, no gradients — matches the app theme.
+// Shared 1200×630 social card. Dark, flat, no gradients, matches the app theme.
 export const ogSize = { width: 1200, height: 630 };
 export const ogContentType = "image/png";
 
@@ -45,7 +45,7 @@ export function renderOgImage() {
             </svg>
           </div>
           <div style={{ fontSize: 68, fontWeight: 700, letterSpacing: -2 }}>
-            Tasker
+            Alhemmah
           </div>
         </div>
 
@@ -59,7 +59,7 @@ export function renderOgImage() {
             maxWidth: 900,
           }}
         >
-          Your daily schedule, checked off and remembered.
+          Plan your day, time your tasks, and build a routine that sticks.
         </div>
 
         {/* Accent underline */}

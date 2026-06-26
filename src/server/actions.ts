@@ -10,7 +10,11 @@ import {
 } from "@/db/schema";
 import { requireUserId } from "@/lib/session";
 import { newId } from "@/lib/ids";
-import { getOrCreateDay, settleDayRecordTimers } from "@/server/queries";
+import {
+  getOrCreateDay,
+  resyncDayIfPristine,
+  settleDayRecordTimers,
+} from "@/server/queries";
 import { liveElapsed, targetSecondsOf, type TimerState } from "@/lib/timer";
 import { setUserLocale, type Locale } from "@/i18n/locale";
 
@@ -147,7 +151,7 @@ export async function updateTemplateBlock(
 /**
  * One-shot copy of a Block's weekday exclusions onto every other work Block
  * sharing its label (trimmed, case-insensitive). Blocks stay independent
- * afterward — this is a copy, not a link (ADR 0003).
+ * afterward, this is a copy, not a link (ADR 0003).
  */
 export async function applyWeekdaysToLabel(id: string, excludedWeekdays: number[]) {
   const userId = await requireUserId();
@@ -385,7 +389,7 @@ export async function stopBlockTimer(blockId: string) {
 
 /**
  * Set a block's tracked time directly (manual edit). Pauses the timer. Reaching
- * the target marks the block done, but — unlike the live timer — never notifies
+ * the target marks the block done, but, unlike the live timer, never notifies
  * or hands off (ADR 0004).
  */
 export async function setBlockTracked(blockId: string, seconds: number) {
@@ -420,6 +424,18 @@ export async function settleDayTimers(recordId: string) {
   await requireUserId();
   await settleDayRecordTimers(recordId);
   refreshAll();
+}
+
+/**
+ * Re-sync an untouched today/future day with the current Plan. The client calls
+ * this only for non-past dates; past snapshots stay frozen. Returns whether the
+ * day's blocks changed (so the caller can refresh).
+ */
+export async function resyncDayFromTemplate(recordId: string): Promise<boolean> {
+  const userId = await requireUserId();
+  const changed = await resyncDayIfPristine(userId, recordId);
+  if (changed) refreshAll();
+  return changed;
 }
 
 /* ------------------------------ Settings ------------------------------ */

@@ -9,7 +9,7 @@ export async function getSession() {
 
 /**
  * Returns the authenticated user id, or redirects to /sign-in.
- * Every data query is scoped by this id — see docs/adr/0001.
+ * Every data query is scoped by this id, see docs/adr/0001.
  */
 export async function requireUserId(): Promise<string> {
   const session = await getSession();

@@ -68,7 +68,7 @@ export function settleTimers(input: TimerState[], nowMs: number): SettleResult {
       changed = true;
     }
 
-    // Breaks never hand off — they run over in place.
+    // Breaks never hand off, they run over in place.
     if (b.kind === "break") break;
 
     const surplus = elapsed - b.targetSeconds;
@@ -76,7 +76,7 @@ export function settleTimers(input: TimerState[], nowMs: number): SettleResult {
       (n, idx) =>
         idx > i && n.kind === "work" && !n.done && sameTask(n.label, b.label),
     );
-    if (j === -1) break; // no later same-task block — overtime in place
+    if (j === -1) break; // no later same-task block, overtime in place
 
     // Freeze this block exactly at target; carry the surplus onto the next one.
     b.trackedSeconds = b.targetSeconds;

@@ -12,7 +12,7 @@ import { newId } from "@/lib/ids";
 import { weekdayOf } from "@/lib/dates";
 import { settleTimers, targetSecondsOf, type TimerState } from "@/lib/timer";
 
-/* All functions here are scoped by userId — the authorization boundary (ADR 0001). */
+/* All functions here are scoped by userId, the authorization boundary (ADR 0001). */
 
 export async function getSettings(userId: string) {
   const existing = await db
@@ -62,8 +62,8 @@ export async function getTemplateBlocks(
 }
 
 /**
- * Distinct work-block labels the user has typed anywhere — across the Template
- * and every Day Record — for the label autocomplete (ADR 0003). Deduped case-
+ * Distinct work-block labels the user has typed anywhere, across the Template
+ * and every Day Record, for the label autocomplete (ADR 0003). Deduped case-
  * insensitively (most-recent casing wins), most-recently-used first.
  */
 export async function getLabelSuggestions(userId: string): Promise<string[]> {
@@ -135,7 +135,7 @@ export async function getOrCreateDay(
     .onConflictDoNothing()
     .returning({ id: dayRecords.id });
 
-  // Lost a race to create this day — load whatever the winner created.
+  // Lost a race to create this day, load whatever the winner created.
   if (!inserted[0]) {
     const winner = await db
       .select()
@@ -198,6 +198,71 @@ async function loadDayBlocks(dayRecordId: string): Promise<DayBlock[]> {
     .from(dayBlocks)
     .where(eq(dayBlocks.dayRecordId, dayRecordId))
     .orderBy(asc(dayBlocks.position), asc(dayBlocks.createdAt));
+}
+
+/**
+ * Keep an untouched present/future day in sync with the current Template.
+ *
+ * A Day Record is auto-created (and snapshotted) the first time its date is
+ * visited, which for a brand-new user happens before they have finished authoring
+ * their Plan. Without this, that early snapshot freezes and later Template edits
+ * never appear. So: while a day is **pristine** (nothing done, no ad-hoc block, no
+ * tracked time, no running timer) we re-seed it from the live Template whenever the
+ * content differs. Pure reordering is preserved (the comparison ignores order), and
+ * the caller must only invoke this for today-or-future dates so past snapshots stay
+ * frozen. Returns whether anything changed.
+ */
+export async function resyncDayIfPristine(
+  userId: string,
+  recordId: string,
+): Promise<boolean> {
+  const rec = await db
+    .select()
+    .from(dayRecords)
+    .where(and(eq(dayRecords.id, recordId), eq(dayRecords.userId, userId)))
+    .limit(1);
+  if (!rec[0]) return false;
+
+  const blocks = await loadDayBlocks(recordId);
+  const touched = blocks.some(
+    (b) => b.done || b.isAdhoc || b.trackedSeconds > 0 || b.runningSince != null,
+  );
+  if (touched) return false;
+
+  const weekday = weekdayOf(rec[0].localDate);
+  const template = await getTemplateBlocks(userId);
+  const seed = template.filter((b) => !b.excludedWeekdays.includes(weekday));
+
+  // Compare content ignoring order, so a pure day-only reorder is left alone.
+  const key = (kind: string, label: string | null, dur: number) =>
+    `${kind}|${(label ?? "").trim().toLowerCase()}|${dur}`;
+  const cur = blocks.map((b) => key(b.kind, b.label, b.durationHours)).sort();
+  const next = seed.map((b) => key(b.kind, b.label, b.durationHours)).sort();
+  if (cur.length === next.length && cur.every((v, i) => v === next[i])) return false;
+
+  await db
+    .delete(dayBlocks)
+    .where(and(eq(dayBlocks.dayRecordId, recordId), eq(dayBlocks.userId, userId)));
+  if (seed.length > 0) {
+    await db.insert(dayBlocks).values(
+      seed.map((b, i) => ({
+        id: newId(),
+        dayRecordId: recordId,
+        userId,
+        kind: b.kind,
+        label: b.label ?? "",
+        durationHours: b.durationHours,
+        done: false,
+        isAdhoc: false,
+        position: i,
+      })),
+    );
+  }
+  await db
+    .update(dayRecords)
+    .set({ populated: seed.length > 0 })
+    .where(eq(dayRecords.id, recordId));
+  return true;
 }
 
 function toTimerState(b: DayBlock): TimerState {

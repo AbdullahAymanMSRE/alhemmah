@@ -1,15 +1,23 @@
 import type { MetadataRoute } from "next";
-
-const siteUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
+import { siteUrl } from "@/lib/site";
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
       allow: "/",
-      // Personal, auth-gated areas — no value in crawling these.
-      disallow: ["/day/", "/schedule", "/tasks", "/settings", "/api/"],
+      // Personal, auth-gated areas and login forms, no value in crawling these.
+      disallow: [
+        "/day/",
+        "/schedule",
+        "/tasks",
+        "/settings",
+        "/sign-in",
+        "/sign-up",
+        "/api/",
+      ],
     },
+    sitemap: `${siteUrl}/sitemap.xml`,
     host: siteUrl,
   };
 }
