@@ -340,7 +340,7 @@ export function DayView({
 
                 <span
                   className={cn(
-                    "auto-dir flex-1 text-sm",
+                    "auto-dir min-w-0 flex-1 break-words text-sm",
                     b.kind === "break" && "text-muted",
                     b.done && "text-faint line-through",
                   )}

@@ -23,7 +23,10 @@ export function Tooltip({
       <span
         role="tooltip"
         className={cn(
-          "pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2",
+          // Hidden on touch/small screens: hover hints are useless there and, being
+          // centered + nowrap on edge buttons, they stick past the viewport and
+          // create a horizontal scroll. display:none removes them from layout.
+          "pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 hidden -translate-x-1/2 sm:block",
           "whitespace-nowrap rounded-md border border-border bg-surface-2 px-2 py-1",
           "text-xs text-foreground opacity-0 transition-opacity duration-100",
           "group-hover/tt:opacity-100 group-focus-within/tt:opacity-100",

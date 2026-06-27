@@ -103,7 +103,7 @@ export function BlockTimer({
         />
       ) : (
         <>
-          <div className="flex flex-1 items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             <span
               className={cn(
                 "shrink-0 text-xs tabular-nums",

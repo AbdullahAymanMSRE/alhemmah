@@ -41,7 +41,10 @@ export function ScheduleEditor({
   const locale = useLocale();
   // Arabic puts a non-breaking space between number and unit: "5 س"; English is "5h".
   const unitGap = locale === "ar" ? " " : "";
-  const units = { h: `${unitGap}${tc("hUnit")}`, m: `${unitGap}${tc("mUnit")}` };
+  const units = {
+    h: `${unitGap}${tc("hUnit")}`,
+    m: `${unitGap}${tc("mUnit")}`,
+  };
   const router = useRouter();
   const [, start] = useTransition();
   const [items, setItems] = useState(blocks);
@@ -51,9 +54,9 @@ export function ScheduleEditor({
   const sig = useMemo(
     () =>
       JSON.stringify(
-        blocks.map((b) => [b.id, b.durationHours, b.label, b.excludedWeekdays]),
+        blocks.map((b) => [b.id, b.durationHours, b.label, b.excludedWeekdays])
       ),
-    [blocks],
+    [blocks]
   );
   useEffect(() => {
     setItems(blocks);
@@ -94,7 +97,7 @@ export function ScheduleEditor({
     const v = Math.max(0, round2(value));
     if (v === b.durationHours) return;
     setItems((prev) =>
-      prev.map((x) => (x.id === id ? { ...x, durationHours: v } : x)),
+      prev.map((x) => (x.id === id ? { ...x, durationHours: v } : x))
     );
     start(async () => {
       await updateTemplateBlock(id, { durationHours: v });
@@ -113,7 +116,9 @@ export function ScheduleEditor({
     });
     if (value === (b.label ?? "")) return;
     if (b.kind === "work" && !value) return; // don't blank a work label
-    setItems((prev) => prev.map((x) => (x.id === id ? { ...x, label: value } : x)));
+    setItems((prev) =>
+      prev.map((x) => (x.id === id ? { ...x, label: value } : x))
+    );
     start(async () => {
       await updateTemplateBlock(id, { label: value });
       router.refresh();
@@ -122,7 +127,7 @@ export function ScheduleEditor({
 
   function setWeekdays(id: string, excludedWeekdays: number[]) {
     setItems((prev) =>
-      prev.map((x) => (x.id === id ? { ...x, excludedWeekdays } : x)),
+      prev.map((x) => (x.id === id ? { ...x, excludedWeekdays } : x))
     );
     start(async () => {
       await updateTemplateBlock(id, { excludedWeekdays });
@@ -137,8 +142,8 @@ export function ScheduleEditor({
       prev.map((x) =>
         x.kind === "work" && (x.label ?? "").trim().toLowerCase() === label
           ? { ...x, excludedWeekdays }
-          : x,
-      ),
+          : x
+      )
     );
     start(async () => {
       await applyWeekdaysToLabel(id, excludedWeekdays);
@@ -167,7 +172,7 @@ export function ScheduleEditor({
               "shrink-0 whitespace-nowrap rounded-md border bg-surface px-2.5 py-1 text-xs tabular-nums",
               total >= 24
                 ? "border-danger/40 text-danger"
-                : "border-border text-muted",
+                : "border-border text-muted"
             )}
             title={total >= 24 ? tc("dayFull") : undefined}
           >
@@ -212,16 +217,17 @@ export function ScheduleEditor({
           items={items}
           onReorder={reorder}
           renderItem={(b, handle) => (
-            <div className="rounded-lg border border-border bg-surface p-2.5">
-              <div className="flex items-center gap-2">
-                <button
-                  {...handle}
-                  className="cursor-grab touch-none rounded p-1 text-faint hover:text-muted active:cursor-grabbing"
-                  aria-label={t("reorderHint")}
-                >
-                  <GripIcon />
-                </button>
-
+            <div className="flex gap-2 rounded-lg border border-border bg-surface p-2.5">
+              <button
+                {...handle}
+                className="cursor-grab touch-none rounded p-1 text-faint hover:text-muted active:cursor-grabbing"
+                aria-label={t("reorderHint")}
+              >
+                <GripIcon />
+              </button>
+              {/* Wraps on narrow screens: the label takes the first line and all
+                  the controls (drag / duration / weekday / delete) drop to the next. */}
+              <div className="flex flex-1 flex-wrap items-center gap-2">
                 {b.kind === "work" ? (
                   <input
                     value={labelDrafts[b.id] ?? b.label ?? ""}
@@ -231,34 +237,36 @@ export function ScheduleEditor({
                       setLabelDrafts((d) => ({ ...d, [b.id]: e.target.value }))
                     }
                     onBlur={(e) => commitLabel(b.id, e.target.value)}
-                    className="auto-dir h-9 flex-1 rounded-md border border-border bg-surface-2 px-2 text-sm outline-none focus:border-border-strong"
+                    className="auto-dir h-9 min-w-0 flex-1 basis-32 rounded-md border border-border bg-surface-2 px-2 text-sm outline-none focus:border-border-strong"
                     aria-label={t("workLabel")}
                   />
                 ) : (
-                  <span className="flex-1 text-sm text-muted">
+                  <span className="min-w-0 flex-1 basis-32 text-sm text-muted">
                     {b.label || td("break")}
                   </span>
                 )}
 
-                <DurationInput
-                  valueHours={b.durationHours}
-                  onChange={(hours) => commitDuration(b.id, hours)}
-                  ariaLabel={t("duration")}
-                />
+                <div className="flex w-full items-center gap-2">
+                  <DurationInput
+                    valueHours={b.durationHours}
+                    onChange={(hours) => commitDuration(b.id, hours)}
+                    ariaLabel={t("duration")}
+                  />
 
-                <WeekdayDisclosure
-                  block={b}
-                  onChange={(days) => setWeekdays(b.id, days)}
-                  onApplyAll={(days) => applyWeekdaysEverywhere(b.id, days)}
-                />
+                  <WeekdayDisclosure
+                    block={b}
+                    onChange={(days) => setWeekdays(b.id, days)}
+                    onApplyAll={(days) => applyWeekdaysEverywhere(b.id, days)}
+                  />
 
-                <button
-                  onClick={() => remove(b.id)}
-                  className="rounded p-1.5 text-faint transition-colors hover:text-danger"
-                  aria-label={t("delete")}
-                >
-                  <TrashIcon />
-                </button>
+                  <button
+                    onClick={() => remove(b.id)}
+                    className="rounded p-1.5 text-faint transition-colors hover:text-danger"
+                    aria-label={t("delete")}
+                  >
+                    <TrashIcon />
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -288,17 +296,17 @@ function WeekdayDisclosure({
     onChange(
       excluded.includes(d)
         ? excluded.filter((x) => x !== d)
-        : [...excluded, d].sort((a, b) => a - b),
+        : [...excluded, d].sort((a, b) => a - b)
     );
   }
 
   return (
-    <div className="relative">
+    <div className="ms-auto relative">
       <button
         onClick={() => setOpen((o) => !o)}
         className={cn(
           "relative rounded p-1.5 transition-colors",
-          active ? "text-accent" : "text-faint hover:text-muted",
+          active ? "text-accent" : "text-faint hover:text-muted"
         )}
         aria-label={t("skipOn")}
         aria-expanded={open}
@@ -322,7 +330,7 @@ function WeekdayDisclosure({
                   "rounded-md border px-2 py-1 text-xs transition-colors",
                   excluded.includes(d)
                     ? "border-border-strong bg-surface-2 text-faint line-through"
-                    : "border-border text-muted hover:text-foreground",
+                    : "border-border text-muted hover:text-foreground"
                 )}
               >
                 {tw(String(d))}
@@ -373,7 +381,9 @@ function AddBlocks() {
     <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border-strong bg-surface/50 p-4">
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex flex-1 flex-col gap-1.5">
-          <span className="text-xs font-medium text-muted">{t("workLabel")}</span>
+          <span className="text-xs font-medium text-muted">
+            {t("workLabel")}
+          </span>
           <input
             value={label}
             list={SUGGESTIONS_ID}
@@ -384,8 +394,14 @@ function AddBlocks() {
           />
         </label>
         <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-muted">{t("duration")}</span>
-          <DurationInput valueHours={workDur} onChange={setWorkDur} ariaLabel={t("duration")} />
+          <span className="text-xs font-medium text-muted">
+            {t("duration")}
+          </span>
+          <DurationInput
+            valueHours={workDur}
+            onChange={setWorkDur}
+            ariaLabel={t("duration")}
+          />
         </div>
         <button
           onClick={addWork}
@@ -398,8 +414,14 @@ function AddBlocks() {
 
       <div className="flex items-end gap-2 border-t border-border pt-3">
         <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-muted">{t("duration")}</span>
-          <DurationInput valueHours={breakDur} onChange={setBreakDur} ariaLabel={t("duration")} />
+          <span className="text-xs font-medium text-muted">
+            {t("duration")}
+          </span>
+          <DurationInput
+            valueHours={breakDur}
+            onChange={setBreakDur}
+            ariaLabel={t("duration")}
+          />
         </div>
         <button
           onClick={addBreak}
