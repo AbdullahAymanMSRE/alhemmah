@@ -6,7 +6,21 @@ import { db, schema } from "@/db";
 const googleConfigured =
   !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET;
 
+// Where the app is served. better-auth derives its base URL from this and rejects
+// any request whose Origin is not trusted ("Invalid origin"). We list both the
+// apex and www host so a www/apex mismatch (or a redirect between them) can't 403.
+const baseURL =
+  process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_SITE_URL;
+
+const trustedOrigins = [
+  "http://localhost:3000",
+  "https://alhemmah.com",
+  "https://www.alhemmah.com",
+];
+
 export const auth = betterAuth({
+  baseURL,
+  trustedOrigins,
   database: drizzleAdapter(db, {
     provider: "pg",
     schema,
