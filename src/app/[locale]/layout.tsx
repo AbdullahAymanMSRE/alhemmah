@@ -75,6 +75,9 @@ export async function generateMetadata({
     },
     description,
     keywords,
+    // The icon files live at the app root (not under [locale]); reference them
+    // explicitly so they resolve on every locale page.
+    icons: { icon: "/icon.svg", apple: "/apple-icon" },
     alternates: {
       languages: {
         en: "/",

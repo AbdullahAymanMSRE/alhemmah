@@ -17,6 +17,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@neondatabase/serverless": "^1.1.0",
+    "arabic-reshaper": "^1.1.0",
     "better-auth": "^1.6.19",
     "drizzle-orm": "^0.45.2",
     "geist": "^1.7.2",

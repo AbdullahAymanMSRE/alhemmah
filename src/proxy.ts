@@ -11,8 +11,10 @@ import { routing } from "./i18n/routing";
 export const proxy = createMiddleware(routing);
 
 export const config = {
-  // Run on pages, not on API routes, Next internals, static assets, or metadata files.
+  // Run on pages (incl. the locale-aware opengraph-image / twitter-image routes),
+  // not on API routes, Next internals, static assets, or the root-level metadata
+  // files (icon, apple-icon, manifest, robots, sitemap).
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|icon.svg|apple-icon|opengraph-image|twitter-image|manifest.webmanifest|robots.txt|sitemap.xml).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|icon.svg|apple-icon|manifest.webmanifest|robots.txt|sitemap.xml).*)",
   ],
 };
