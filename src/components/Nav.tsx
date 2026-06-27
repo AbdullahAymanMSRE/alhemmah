@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { authClient } from "@/lib/auth-client";
 import { todayLocalDate } from "@/lib/dates";
 import { cn } from "@/lib/cn";
+import { Spinner } from "@/components/icons";
 
 export function Nav({ dayStartHour }: { dayStartHour: number }) {
   const t = useTranslations("nav");
@@ -18,7 +20,9 @@ export function Nav({ dayStartHour }: { dayStartHour: number }) {
     { href: "/settings", label: t("settings"), match: "/settings" },
   ];
 
+  const [signingOut, setSigningOut] = useState(false);
   async function signOut() {
+    setSigningOut(true);
     await authClient.signOut();
     router.push("/sign-in");
     router.refresh();
@@ -60,8 +64,10 @@ export function Nav({ dayStartHour }: { dayStartHour: number }) {
         </nav>
         <button
           onClick={signOut}
-          className="rounded-md px-2.5 py-1.5 text-sm text-muted transition-colors hover:text-foreground"
+          disabled={signingOut}
+          className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-muted transition-colors hover:text-foreground disabled:opacity-50"
         >
+          {signingOut && <Spinner className="size-4" />}
           {t("signOut")}
         </button>
       </div>

@@ -8,7 +8,7 @@ import { AddTaskDialog } from "@/components/AddTaskDialog";
 import { BlockTimer } from "@/components/BlockTimer";
 import { Tooltip } from "@/components/Tooltip";
 import { CheckIcon, GripIcon, TrashIcon } from "@/components/icons";
-import { addDays, todayLocalDate } from "@/lib/dates";
+import { todayLocalDate } from "@/lib/dates";
 import { formatDuration } from "@/lib/duration";
 import { liveElapsed, targetSecondsOf, type TimerState } from "@/lib/timer";
 import { cn } from "@/lib/cn";
@@ -147,26 +147,6 @@ export function DayView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nowMs, sig, isToday]);
 
-  const intlLocale = locale === "ar" ? "ar" : "en";
-  const formattedDate = new Intl.DateTimeFormat(intlLocale, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  }).format(new Date(`${date}T12:00:00`));
-
-  // Label relative to today ("Today", "Yesterday", "2 days ago", "In 3 days"…).
-  const diffDays = Math.round(
-    (new Date(`${date}T12:00:00`).getTime() -
-      new Date(`${today}T12:00:00`).getTime()) /
-      86_400_000,
-  );
-  const relativeLabel = capitalize(
-    new Intl.RelativeTimeFormat(intlLocale, { numeric: "auto" }).format(
-      diffDays,
-      "day",
-    ),
-  );
-
   // The 24h cap counts every block (work + breaks).
   const dayFull = items.reduce((s, b) => s + b.durationHours, 0) >= 24;
 
@@ -272,50 +252,6 @@ export function DayView({
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Date navigation */}
-      <div className="flex flex-col items-center gap-2">
-        <div className="flex w-full items-center justify-between gap-2">
-          <button
-            onClick={() => router.push(`/day/${addDays(date, -1)}`)}
-            className="rounded-md border border-border bg-surface px-2.5 py-2 text-sm text-muted transition-colors hover:text-foreground"
-            aria-label={t("previousDay")}
-          >
-            ‹
-          </button>
-
-          <div className="flex flex-col items-center">
-            <span className="auto-dir text-sm font-semibold">{formattedDate}</span>
-            {isToday ? (
-              <span className="text-xs text-accent">{relativeLabel}</span>
-            ) : (
-              <button
-                onClick={() => router.push(`/day/${today}`)}
-                className="text-xs text-accent hover:underline"
-                title={t("goToToday")}
-              >
-                {relativeLabel}
-              </button>
-            )}
-          </div>
-
-          <button
-            onClick={() => router.push(`/day/${addDays(date, 1)}`)}
-            className="rounded-md border border-border bg-surface px-2.5 py-2 text-sm text-muted transition-colors hover:text-foreground"
-            aria-label={t("nextDay")}
-          >
-            ›
-          </button>
-        </div>
-
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => e.target.value && router.push(`/day/${e.target.value}`)}
-          className="h-9 rounded-md border border-border bg-surface px-2 text-xs text-muted outline-none focus:border-border-strong"
-          aria-label={t("pickDate")}
-        />
-      </div>
-
       {/* Summary */}
       {work.length > 0 && (
         <div className="rounded-lg border border-border bg-surface p-4">
@@ -486,8 +422,4 @@ function notify(body: string) {
 
 function round(n: number) {
   return Math.round(n * 100) / 100;
-}
-
-function capitalize(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }
