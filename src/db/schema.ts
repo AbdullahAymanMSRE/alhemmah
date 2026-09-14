@@ -184,6 +184,9 @@ export const userSettings = pgTable("user_settings", {
   language: text("language", { enum: ["en", "ar"] }).notNull().default("en"),
   // 0..23, hour at which a new day begins. Default 0 (midnight).
   dayStartHour: integer("day_start_hour").notNull().default(0),
+  // True once the starter Template has been seeded for this user. Guards against
+  // re-seeding someone who deliberately emptied their Template.
+  templateSeeded: boolean("template_seeded").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()

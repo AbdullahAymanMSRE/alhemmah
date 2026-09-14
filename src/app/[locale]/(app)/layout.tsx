@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { getLocale } from "next-intl/server";
 import { requireUserId } from "@/lib/session";
-import { getSettings } from "@/server/queries";
+import { ensureTemplateSeeded, getSettings } from "@/server/queries";
+import type { Locale } from "@/i18n/routing";
 import { Nav } from "@/components/Nav";
 
 // The whole authenticated app is private, keep it out of search indexes.
@@ -14,6 +16,9 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const userId = await requireUserId();
+  // Every authenticated page passes through here, so this is where a user who has
+  // no Template gets the starter one. Cheap after the first call (a flag check).
+  await ensureTemplateSeeded(userId, (await getLocale()) as Locale);
   const settings = await getSettings(userId);
 
   return (

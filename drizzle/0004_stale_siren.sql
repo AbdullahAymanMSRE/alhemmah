@@ -1,0 +1,1 @@
+ALTER TABLE "user_settings" ADD COLUMN "template_seeded" boolean DEFAULT false NOT NULL;

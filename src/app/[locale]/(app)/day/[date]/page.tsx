@@ -1,6 +1,12 @@
 import { Suspense } from "react";
 import { requireUserId } from "@/lib/session";
-import { getLabelSuggestions, getOrCreateDay, getSettings } from "@/server/queries";
+import {
+  ensureTemplateSeeded,
+  getLabelSuggestions,
+  getOrCreateDay,
+  getSettings,
+} from "@/server/queries";
+import type { Locale } from "@/i18n/routing";
 import { isValidLocalDate } from "@/lib/dates";
 import { DayView } from "@/components/DayView";
 import { DayHeader } from "@/components/DayHeader";
@@ -25,7 +31,12 @@ export default async function DayPage({
     <div className="flex flex-col gap-5">
       <DayHeader date={date} dayStartHour={settings.dayStartHour} />
       <Suspense key={date} fallback={<AppLoading />}>
-        <DayBody userId={userId} date={date} dayStartHour={settings.dayStartHour} />
+        <DayBody
+          userId={userId}
+          date={date}
+          locale={locale as Locale}
+          dayStartHour={settings.dayStartHour}
+        />
       </Suspense>
     </div>
   );
@@ -34,12 +45,19 @@ export default async function DayPage({
 async function DayBody({
   userId,
   date,
+  locale,
   dayStartHour,
 }: {
   userId: string;
   date: string;
+  locale: Locale;
   dayStartHour: number;
 }) {
+  // The layout seeds too, but layout and page render in parallel, so a first-ever
+  // visit could otherwise snapshot an empty Day Record before the Template exists.
+  // Seeding here first makes the very first day the user sees a filled one.
+  await ensureTemplateSeeded(userId, locale);
+
   const [{ recordId, blocks }, suggestions] = await Promise.all([
     getOrCreateDay(userId, date),
     getLabelSuggestions(userId),

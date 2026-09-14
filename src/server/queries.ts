@@ -9,6 +9,10 @@ import {
   type DayBlock,
 } from "@/db/schema";
 import { newId } from "@/lib/ids";
+import {
+  defaultTemplateBlocks,
+  shouldSeedTemplate,
+} from "@/lib/default-template";
 import { weekdayOf } from "@/lib/dates";
 import { settleTimers, targetSecondsOf, type TimerState } from "@/lib/timer";
 
@@ -32,6 +36,69 @@ export async function getSettings(userId: string) {
     .where(eq(userSettings.userId, userId))
     .limit(1);
   return created[0];
+}
+
+/**
+ * Seeds the starter Template (see `@/lib/default-template`) the first time an
+ * authenticated user reaches the app, so nobody lands on an empty day. Safe to
+ * call on every request: `shouldSeedTemplate` decides, and the insert is guarded
+ * by the `templateSeeded` flag so it happens at most once per user.
+ *
+ * Today's Day Record catches up on its own: while a day is pristine,
+ * `resyncDayIfPristine` re-seeds it from the live Template.
+ */
+export async function ensureTemplateSeeded(
+  userId: string,
+  language: "en" | "ar",
+): Promise<boolean> {
+  const settings = await getSettings(userId);
+  if (settings.templateSeeded) return false;
+
+  const existing = await db
+    .select({ id: templateBlocks.id })
+    .from(templateBlocks)
+    .where(eq(templateBlocks.userId, userId));
+
+  if (
+    !shouldSeedTemplate({
+      alreadySeeded: settings.templateSeeded,
+      templateBlockCount: existing.length,
+    })
+  ) {
+    // Nothing to seed, but record that we looked so we never look again.
+    await db
+      .update(userSettings)
+      .set({ templateSeeded: true })
+      .where(eq(userSettings.userId, userId));
+    return false;
+  }
+
+  // Claim the seed first: if two requests race, only one flips the flag from
+  // false, and only that one inserts.
+  const claimed = await db
+    .update(userSettings)
+    .set({ templateSeeded: true })
+    .where(
+      and(
+        eq(userSettings.userId, userId),
+        eq(userSettings.templateSeeded, false),
+      ),
+    )
+    .returning({ userId: userSettings.userId });
+  if (!claimed[0]) return false;
+
+  await db.insert(templateBlocks).values(
+    defaultTemplateBlocks(language).map((b) => ({
+      id: newId(),
+      userId,
+      kind: b.kind,
+      label: b.label,
+      durationHours: b.durationHours,
+      excludedWeekdays: [],
+      position: b.position,
+    })),
+  );
+  return true;
 }
 
 export type TemplateBlockView = {
