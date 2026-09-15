@@ -124,10 +124,12 @@
     "totalPlanned": "Total planned: {hours}",
     "totalsTitle": "Totals",
     "hoursShort": "{hours}",
-    "skipOn": "Skip on",
     "applyToAll": "Apply to all “{label}”",
     "delete": "Delete",
-    "reorderHint": "Drag to reorder"
+    "reorderHint": "Drag to reorder",
+    "runsOn": "Runs on",
+    "everyDay": "Every day",
+    "noDays": "No days"
   },
   "settings": {
     "title": "Settings",
@@ -156,5 +158,14 @@
     "hUnit": "h",
     "mUnit": "m",
     "dayFull": "Day is full (24 h max)"
+  },
+  "weekdaysShort": {
+    "0": "Sun",
+    "1": "Mon",
+    "2": "Tue",
+    "3": "Wed",
+    "4": "Thu",
+    "5": "Fri",
+    "6": "Sat"
   }
 }

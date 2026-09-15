@@ -8,6 +8,7 @@ import { DurationInput } from "@/components/DurationInput";
 import { CalendarIcon, GripIcon, TrashIcon } from "@/components/icons";
 import { formatDuration } from "@/lib/duration";
 import { cn } from "@/lib/cn";
+import { WEEKDAYS, weekdaysSummary } from "@/lib/weekdays";
 import {
   addTemplateBreak,
   addTemplateWorkBlock,
@@ -276,7 +277,12 @@ export function ScheduleEditor({
   );
 }
 
-/** A small calendar button that expands the 7 weekday toggles + apply-to-all. */
+/**
+ * The Block's weekday schedule, stated on the row ("Every day", "Mon, Wed, Fri")
+ * and editable in a popover. It reads positively even though the stored model is
+ * negative (`excludedWeekdays`): only 5 of 47 users with a Template had ever
+ * found this when it was an unlabelled icon whose popover said "Skip on".
+ */
 function WeekdayDisclosure({
   block,
   onChange,
@@ -287,10 +293,12 @@ function WeekdayDisclosure({
   onApplyAll: (days: number[]) => void;
 }) {
   const t = useTranslations("schedule");
-  const tw = useTranslations("weekdays");
+  const tw = useTranslations("weekdaysShort");
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
   const excluded = block.excludedWeekdays;
-  const active = excluded.length > 0;
+  const summary = weekdaysSummary(excluded);
+  const everyDay = summary.kind === "every";
 
   function toggleDay(d: number) {
     onChange(
@@ -300,42 +308,55 @@ function WeekdayDisclosure({
     );
   }
 
+  const label =
+    summary.kind === "every"
+      ? t("everyDay")
+      : summary.kind === "none"
+        ? t("noDays")
+        : summary.days
+            .map((d) => tw(String(d)))
+            .join(locale === "ar" ? "، " : ", ");
+
   return (
     <div className="ms-auto relative">
       <button
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "relative rounded p-1.5 transition-colors",
-          active ? "text-accent" : "text-faint hover:text-muted"
+          "flex max-w-48 items-center gap-1.5 rounded-md border px-2 py-1.5 text-xs transition-colors",
+          everyDay
+            ? "border-border text-muted hover:text-foreground"
+            : "border-accent text-accent"
         )}
-        aria-label={t("skipOn")}
+        aria-label={t("runsOn")}
         aria-expanded={open}
       >
-        <CalendarIcon />
-        {active && (
-          <span className="absolute end-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-accent" />
-        )}
+        <CalendarIcon className="size-3.5 shrink-0" />
+        <span className="truncate">{label}</span>
       </button>
 
       {open && (
         <div className="absolute end-0 z-10 mt-1 w-48 rounded-lg border border-border-strong bg-surface p-3 shadow-lg">
-          <span className="text-xs font-medium text-muted">{t("skipOn")}</span>
+          <span className="text-xs font-medium text-muted">{t("runsOn")}</span>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {[0, 1, 2, 3, 4, 5, 6].map((d) => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => toggleDay(d)}
-                className={cn(
-                  "rounded-md border px-2 py-1 text-xs transition-colors",
-                  excluded.includes(d)
-                    ? "border-border-strong bg-surface-2 text-faint line-through"
-                    : "border-border text-muted hover:text-foreground"
-                )}
-              >
-                {tw(String(d))}
-              </button>
-            ))}
+            {WEEKDAYS.map((d) => {
+              const runs = !excluded.includes(d);
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => toggleDay(d)}
+                  className={cn(
+                    "rounded-md border px-2 py-1 text-xs transition-colors",
+                    runs
+                      ? "border-accent bg-surface-2 text-accent"
+                      : "border-border text-faint hover:text-muted"
+                  )}
+                  aria-pressed={runs}
+                >
+                  {tw(String(d))}
+                </button>
+              );
+            })}
           </div>
           {block.kind === "work" && (block.label ?? "").trim() && (
             <button
