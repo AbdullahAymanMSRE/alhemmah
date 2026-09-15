@@ -13,8 +13,8 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     background_color: "#0b0c0e",
     theme_color: "#0b0c0e",
     icons: [
-      { src: "/icon.svg", type: "image/svg+xml", sizes: "any" },
-      { src: "/apple-icon", type: "image/png", sizes: "180x180" },
+      { src: "/icon.png", type: "image/png", sizes: "96x96" },
+      { src: "/apple-icon.png", type: "image/png", sizes: "180x180" },
     ],
   };
 }
